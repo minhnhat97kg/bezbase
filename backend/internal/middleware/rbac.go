@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"net/http"
 
-	"bezbase/internal/auth"
 	"bezbase/internal/models"
+	"bezbase/internal/pkg/auth"
 	"bezbase/internal/services"
 
 	"github.com/labstack/echo/v4"
