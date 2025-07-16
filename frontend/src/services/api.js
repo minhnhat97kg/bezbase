@@ -74,8 +74,18 @@ export const healthService = {
 
 export const rbacService = {
   // Role management
-  getRoles: () => {
-    return api.get('/v1/rbac/roles');
+  getRoles: (params = {}) => {
+    const queryParams = new URLSearchParams();
+    if (params.page) queryParams.append('page', params.page);
+    if (params.page_size) queryParams.append('page_size', params.page_size);
+    if (params.search) queryParams.append('search', params.search);
+    if (params.status) queryParams.append('status', params.status);
+    if (params.is_system !== undefined) queryParams.append('is_system', params.is_system);
+    if (params.sort) queryParams.append('sort', params.sort);
+    if (params.order) queryParams.append('order', params.order);
+    
+    const url = queryParams.toString() ? `/v1/rbac/roles?${queryParams.toString()}` : '/v1/rbac/roles';
+    return api.get(url);
   },
   
   getRole: (roleId) => {

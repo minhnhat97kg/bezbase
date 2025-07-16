@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { userService } from '../services/api';
 
 const Profile = () => {
-  const { user, updateUser } = useAuth();
+  const { user, updateUser, userProfile } = useAuth();
   const [formData, setFormData] = useState({
     first_name: user?.first_name || '',
     last_name: user?.last_name || '',
@@ -11,6 +11,25 @@ const Profile = () => {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    const fetchProfile = async () => {
+      if (userProfile) {
+        await userProfile();
+      }
+    };
+    
+    fetchProfile();
+  }, []);
+
+  useEffect(() => {
+    if (user) {
+      setFormData({
+        first_name: user.first_name || '',
+        last_name: user.last_name || '',
+      });
+    }
+  }, [user]);
 
   const handleChange = (e) => {
     setFormData({

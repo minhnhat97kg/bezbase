@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { rbacService } from '../../services/api';
+import Table from '../common/Table';
+import Icon from '../common/Icons';
 
 const PermissionManager = ({ roles, onRefresh }) => {
   const [permissions, setPermissions] = useState([]);
@@ -44,7 +46,7 @@ const PermissionManager = ({ roles, onRefresh }) => {
     try {
       setLoading(true);
       setError(null);
-      
+
       const params = {
         page: currentPage,
         page_size: pageSize,
@@ -56,9 +58,9 @@ const PermissionManager = ({ roles, onRefresh }) => {
 
       const response = await rbacService.getPermissions(params);
       const data = response.data;
-      
-      setPermissions(data.permissions || []);
-      setTotalPermissions(data.total || 0);
+
+      setPermissions(data.data);
+      setTotalPermissions(data.total_items || data.total || 0);
       setTotalPages(data.total_pages || 0);
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to fetch permissions');
@@ -85,7 +87,7 @@ const PermissionManager = ({ roles, onRefresh }) => {
         resource: newPermission.resource,
         action: newPermission.action,
       });
-      
+
       setNewPermission({ role: '', resource: '', action: '' });
       setShowAddForm(false);
       await fetchPermissions();
@@ -109,7 +111,7 @@ const PermissionManager = ({ roles, onRefresh }) => {
         resource: permission.resource,
         action: permission.action,
       });
-      
+
       await fetchPermissions();
       onRefresh();
     } catch (err) {
@@ -143,120 +145,83 @@ const PermissionManager = ({ roles, onRefresh }) => {
     setCurrentPage(1);
   };
 
-  const getSortIcon = (field) => {
-    if (sortField !== field) {
-      return (
-        <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
-        </svg>
-      );
+  // Table configuration
+  const columns = [
+    {
+      key: 'role',
+      header: 'Role',
+      sortable: true,
+      nowrap: true,
+      render: (value) => (
+        <span className="text-sm font-medium text-gray-900 dark:text-white">
+          {value}
+        </span>
+      )
+    },
+    {
+      key: 'resource',
+      header: 'Resource',
+      sortable: true,
+      nowrap: true,
+      render: (value) => (
+        <span className="text-sm text-gray-500 dark:text-gray-300">
+          {value}
+        </span>
+      )
+    },
+    {
+      key: 'action',
+      header: 'Action',
+      sortable: true,
+      nowrap: true,
+      render: (value) => (
+        <span className="text-sm text-gray-500 dark:text-gray-300">
+          {value}
+        </span>
+      )
+    },
+    {
+      key: 'permission',
+      header: 'Permission',
+      nowrap: true,
+      render: (value, row) => getPermissionBadge(row.resource, row.action)
+    },
+    {
+      key: 'actions',
+      header: 'Actions',
+      align: 'right',
+      nowrap: true,
+      render: (value, row) => (
+        <button
+          onClick={() => handleRemovePermission(row)}
+          className="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300"
+          disabled={loading}
+        >
+          <Icon name="delete" />
+        </button>
+      )
     }
-    return sortOrder === 'asc' ? (
-      <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4h13M3 8h9m-9 4h6m4 0l4-4m0 0l4 4m-4-4v12" />
-      </svg>
-    ) : (
-      <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4h13M3 8h9m-9 4h9m5-4v12m0 0l-4-4m4 4l4-4" />
-      </svg>
-    );
-  };
+  ];
 
   const getPermissionBadge = (resource, action) => {
     const isWildcard = resource === '*' || action === '*';
     return (
-      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-        isWildcard 
-          ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-800 dark:text-yellow-100' 
-          : 'bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-100'
-      }`}>
+      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${isWildcard
+        ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-800 dark:text-yellow-100'
+        : 'bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-100'
+        }`}>
         {action} on {resource}
       </span>
     );
   };
 
-  const renderPagination = () => {
-    const pages = [];
-    const maxVisible = 5;
-    let start = Math.max(1, currentPage - Math.floor(maxVisible / 2));
-    let end = Math.min(totalPages, start + maxVisible - 1);
-    
-    if (end - start + 1 < maxVisible) {
-      start = Math.max(1, end - maxVisible + 1);
-    }
-
-    for (let i = start; i <= end; i++) {
-      pages.push(i);
-    }
-
-    return (
-      <div className="flex items-center justify-between px-4 py-3 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 sm:px-6">
-        <div className="flex items-center justify-between w-full">
-          <div className="flex items-center">
-            <p className="text-sm text-gray-700 dark:text-gray-300">
-              Showing {((currentPage - 1) * pageSize) + 1} to {Math.min(currentPage * pageSize, totalPermissions)} of{' '}
-              {totalPermissions} results
-            </p>
-            <select
-              value={pageSize}
-              onChange={(e) => handlePageSizeChange(Number(e.target.value))}
-              className="ml-4 px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white"
-            >
-              <option value={5}>5 per page</option>
-              <option value={10}>10 per page</option>
-              <option value={25}>25 per page</option>
-              <option value={50}>50 per page</option>
-            </select>
-          </div>
-          
-          <div className="flex items-center space-x-1">
-            <button
-              onClick={() => handlePageChange(1)}
-              disabled={currentPage === 1}
-              className="px-2 py-1 text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 disabled:opacity-50"
-            >
-              First
-            </button>
-            <button
-              onClick={() => handlePageChange(currentPage - 1)}
-              disabled={currentPage === 1}
-              className="px-2 py-1 text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 disabled:opacity-50"
-            >
-              Previous
-            </button>
-            
-            {pages.map(page => (
-              <button
-                key={page}
-                onClick={() => handlePageChange(page)}
-                className={`px-3 py-1 text-sm rounded-md ${
-                  page === currentPage
-                    ? 'bg-blue-600 text-white'
-                    : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
-                }`}
-              >
-                {page}
-              </button>
-            ))}
-            
-            <button
-              onClick={() => handlePageChange(currentPage + 1)}
-              disabled={currentPage === totalPages}
-              className="px-2 py-1 text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 disabled:opacity-50"
-            >
-              Next
-            </button>
-            <button
-              onClick={() => handlePageChange(totalPages)}
-              disabled={currentPage === totalPages}
-              className="px-2 py-1 text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 disabled:opacity-50"
-            >
-              Last
-            </button>
-          </div>
-        </div>
-      </div>
-    );
+  // Pagination configuration
+  const paginationConfig = {
+    currentPage,
+    totalPages,
+    pageSize,
+    total: totalPermissions,
+    pageSizeOptions: [5, 10, 25, 50]
   };
 
   return (
@@ -406,95 +371,18 @@ const PermissionManager = ({ roles, onRefresh }) => {
           </div>
 
           {/* Table */}
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-              <thead className="bg-gray-50 dark:bg-gray-700">
-                <tr>
-                  <th
-                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600"
-                    onClick={() => handleSort('role')}
-                  >
-                    <div className="flex items-center space-x-1">
-                      <span>Role</span>
-                      {getSortIcon('role')}
-                    </div>
-                  </th>
-                  <th
-                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600"
-                    onClick={() => handleSort('resource')}
-                  >
-                    <div className="flex items-center space-x-1">
-                      <span>Resource</span>
-                      {getSortIcon('resource')}
-                    </div>
-                  </th>
-                  <th
-                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600"
-                    onClick={() => handleSort('action')}
-                  >
-                    <div className="flex items-center space-x-1">
-                      <span>Action</span>
-                      {getSortIcon('action')}
-                    </div>
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                    Permission
-                  </th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                {loading ? (
-                  <tr>
-                    <td colSpan={5} className="px-6 py-4 text-center">
-                      <div className="flex justify-center">
-                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-                      </div>
-                    </td>
-                  </tr>
-                ) : permissions.length > 0 ? (
-                  permissions.map((permission) => (
-                    <tr key={permission.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
-                        {permission.role}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">
-                        {permission.resource}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">
-                        {permission.action}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        {getPermissionBadge(permission.resource, permission.action)}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                        <button
-                          onClick={() => handleRemovePermission(permission)}
-                          className="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300"
-                          disabled={loading}
-                        >
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                          </svg>
-                        </button>
-                      </td>
-                    </tr>
-                  ))
-                ) : (
-                  <tr>
-                    <td colSpan={5} className="px-6 py-4 text-center text-gray-500 dark:text-gray-400">
-                      No permissions found
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-
-          {/* Pagination */}
-          {totalPages > 1 && renderPagination()}
+          <Table
+            columns={columns}
+            data={permissions}
+            loading={loading}
+            emptyMessage="No permissions found"
+            onSort={handleSort}
+            sortField={sortField}
+            sortOrder={sortOrder}
+            pagination={paginationConfig}
+            onPageChange={handlePageChange}
+            onPageSizeChange={handlePageSizeChange}
+          />
         </div>
       </div>
     </div>

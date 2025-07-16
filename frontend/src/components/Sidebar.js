@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
+import Icon from './common/Icons';
 
 const Sidebar = ({ sidebarOpen, setSidebarOpen }) => {
   const { user, logout } = useAuth();
@@ -14,30 +15,17 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen }) => {
     {
       name: 'Dashboard',
       href: '/dashboard',
-      icon: (
-        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2-2z" />
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 5a2 2 0 012-2h4a2 2 0 012 2v6H8V5z" />
-        </svg>
-      ),
+      icon: <Icon name="dashboard" />,
     },
     {
       name: 'Profile',
       href: '/profile',
-      icon: (
-        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-        </svg>
-      ),
+      icon: <Icon name="user" />,
     },
     {
       name: 'Role Management',
       href: '/roles',
-      icon: (
-        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-        </svg>
-      ),
+      icon: <Icon name="shield" />,
     },
   ];
 
@@ -57,9 +45,7 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen }) => {
       <div className="flex items-center h-16 px-6 border-b border-gray-200 dark:border-gray-700">
         <div className="flex items-center">
           <div className="w-8 h-8 bg-primary-600 rounded-lg flex items-center justify-center mr-3">
-            <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 24 24">
-              <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
-            </svg>
+            <Icon name="rocket" className="text-white" />
           </div>
           <h1 className="text-xl font-semibold text-gray-900 dark:text-white">BezBase</h1>
         </div>
@@ -103,9 +89,7 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen }) => {
           onClick={handleLogout}
           className="flex items-center w-full px-3 py-2 text-sm font-medium text-gray-700 rounded-md hover:bg-gray-50 hover:text-gray-900 dark:text-gray-300 dark:hover:bg-gray-700 dark:hover:text-white transition-colors"
         >
-          <svg className="w-4 h-4 mr-3 text-gray-400 dark:text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-          </svg>
+          <Icon name="exit" className="mr-3 text-gray-400 dark:text-gray-500" />
           Sign out
         </button>
       </div>

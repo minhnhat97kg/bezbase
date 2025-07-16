@@ -43,19 +43,56 @@ func (h *RBACHandler) CreateRole(c echo.Context) error {
 	return c.JSON(http.StatusOK, dto.ToRoleResponse(role))
 }
 
-// @Summary Get all roles
+// @Summary List all roles with pagination
 // @Tags RBAC
 // @Produce json
-// @Success 200 {object} []dto.RoleResponse
+// @Param page query int false "Page number (default: 1)"
+// @Param page_size query int false "Page size (default: 10, max: 100)"
+// @Param search query string false "Search by name or display name"
+// @Param status query string false "Filter by status (active, inactive)"
+// @Param is_system query bool false "Filter by system roles"
+// @Param sort query string false "Sort field (name, display_name, created_at)"
+// @Param order query string false "Sort order (asc, desc)"
+// @Success 200 {object} dto.RolesListResponse
+// @Failure 400 {object} map[string]interface{}
 // @Failure 500 {object} map[string]interface{}
 // @Router /api/v1/rbac/roles [get]
 func (h *RBACHandler) GetRoles(c echo.Context) error {
-	roles, err := h.rbacService.GetAllRolesWithMetadata()
+	// Parse pagination parameters
+	var pagination dto.PaginationParams
+	if err := c.Bind(&pagination); err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, "Invalid pagination parameters")
+	}
+	pagination.SetDefaults()
+
+	// Parse filter parameters
+	searchFilter := c.QueryParam("search")
+	statusFilter := c.QueryParam("status")
+	isSystemParam := c.QueryParam("is_system")
+	
+	var isSystemFilter *bool
+	if isSystemParam != "" {
+		isSystem, err := strconv.ParseBool(isSystemParam)
+		if err == nil {
+			isSystemFilter = &isSystem
+		}
+	}
+
+	// Parse sort parameters
+	sortField := c.QueryParam("sort")
+	sortOrder := c.QueryParam("order")
+	if sortOrder != "desc" {
+		sortOrder = "asc"
+	}
+
+	roles, total, err := h.rbacService.GetAllRolesWithPagination(pagination.Page, pagination.PageSize, searchFilter, statusFilter, isSystemFilter, sortField, sortOrder)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
 	}
 
-	return c.JSON(http.StatusOK, dto.ToRoleResponses(roles))
+	response := dto.NewPaginatedResponse(dto.ToRoleResponses(roles), pagination.Page, pagination.PageSize, int64(total))
+
+	return c.JSON(http.StatusOK, response)
 }
 
 // @Summary Get role by ID
@@ -252,18 +289,11 @@ func (h *RBACHandler) GetUsersWithRole(c echo.Context) error {
 // @Router /api/v1/rbac/permissions [get]
 func (h *RBACHandler) GetPermissions(c echo.Context) error {
 	// Parse pagination parameters
-	page, err := strconv.Atoi(c.QueryParam("page"))
-	if err != nil || page < 1 {
-		page = 1
+	var pagination dto.PaginationParams
+	if err := c.Bind(&pagination); err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, "Invalid pagination parameters")
 	}
-
-	pageSize, err := strconv.Atoi(c.QueryParam("page_size"))
-	if err != nil || pageSize < 1 {
-		pageSize = 10
-	}
-	if pageSize > 100 {
-		pageSize = 100
-	}
+	pagination.SetDefaults()
 
 	// Parse filter parameters
 	roleFilter := c.QueryParam("role")
@@ -277,20 +307,12 @@ func (h *RBACHandler) GetPermissions(c echo.Context) error {
 		sortOrder = "asc"
 	}
 
-	permissions, total, err := h.rbacService.GetAllPermissions(page, pageSize, roleFilter, resourceFilter, actionFilter, sortField, sortOrder)
+	permissions, total, err := h.rbacService.GetAllPermissions(pagination.Page, pagination.PageSize, roleFilter, resourceFilter, actionFilter, sortField, sortOrder)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
 	}
 
-	totalPages := (total + pageSize - 1) / pageSize
-
-	response := dto.PermissionsListResponse{
-		Permissions: permissions,
-		Total:       total,
-		Page:        page,
-		PageSize:    pageSize,
-		TotalPages:  totalPages,
-	}
+	response := dto.NewPaginatedResponse(permissions, pagination.Page, pagination.PageSize, int64(total))
 
 	return c.JSON(http.StatusOK, response)
 }

@@ -46,6 +46,8 @@ type PermissionResponse struct {
 	Action   string `json:"action"`
 }
 
+type RolesListResponse = PaginatedResponse[RoleResponse]
+
 func ToRoleResponse(role *models.Role) RoleResponse {
 	return RoleResponse{
 		ID:          role.ID,

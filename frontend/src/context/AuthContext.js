@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { authService } from '../services/api';
+import { authService, userService } from '../services/api';
 
 const AuthContext = createContext();
 
@@ -80,12 +80,28 @@ export const AuthProvider = ({ children }) => {
     localStorage.setItem('user', JSON.stringify(updatedUser));
   };
 
+  const userProfile = async () => {
+    try {
+      const response = await userService.getProfile();
+      const userData = response.data;
+      setUser(userData);
+      localStorage.setItem('user', JSON.stringify(userData));
+      return { success: true, user: userData };
+    } catch (error) {
+      return {
+        success: false,   
+        error: error.response?.data?.message || 'Failed to fetch user profile'
+      };
+    }
+  };
+
   const value = {
     user,
     login,
     register,
     logout,
     updateUser,
+    userProfile,
     loading,
   };
 

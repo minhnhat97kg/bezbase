@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { rbacService, userService } from '../../services/api';
+import Icon from '../common/Icons';
 
 const UserRoleAssignment = ({ roles, onRefresh }) => {
   const [selectedUser, setSelectedUser] = useState(null);
@@ -120,8 +121,9 @@ const UserRoleAssignment = ({ roles, onRefresh }) => {
       setRoleToAssign('');
       setShowAssignForm(false);
       setShowUserDropdown(false); // Ensure dropdown is closed
+      setError(null); // Clear any previous errors
       // Do NOT clear user selection or search input
-      onRefresh();
+      // Don't call onRefresh() to prevent parent re-render
       await fetchUserRoles(selectedUser.id);
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to assign role');
@@ -143,8 +145,9 @@ const UserRoleAssignment = ({ roles, onRefresh }) => {
         role: roleName,
       });
       setShowUserDropdown(false); // Ensure dropdown is closed
+      setError(null); // Clear any previous errors
       // Do NOT clear user selection or search input
-      onRefresh();
+      // Don't call onRefresh() to prevent parent re-render
       await fetchUserRoles(selectedUser.id);
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to remove role');
@@ -213,14 +216,10 @@ const UserRoleAssignment = ({ roles, onRefresh }) => {
                 onClick={clearUserSelection}
                 className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
               >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
+                <Icon name="close" />
               </button>
             ) : (
-              <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-              </svg>
+              <Icon name="search" className="text-gray-400" />
             )}
           </div>
         </div>
@@ -318,9 +317,7 @@ const UserRoleAssignment = ({ roles, onRefresh }) => {
                         disabled={loading}
                         title="Remove role"
                       >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                        </svg>
+                        <Icon name="delete" />
                       </button>
                     </div>
                   );

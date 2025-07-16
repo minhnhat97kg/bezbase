@@ -20,7 +20,7 @@ type RBACService struct {
 }
 
 func NewRBACService(db *gorm.DB) (*RBACService, error) {
-	adapter, err := gormadapter.NewAdapterByDBUseTableName(db, "", "rule")
+	adapter, err := gormadapter.NewAdapterByDBUseTableName(db, "", "rules")
 	if err != nil {
 		return nil, fmt.Errorf("failed to create casbin adapter: %w", err)
 	}
@@ -235,6 +235,64 @@ func (r *RBACService) GetAllRolesWithMetadata() ([]models.Role, error) {
 		return nil, fmt.Errorf("failed to get roles: %w", err)
 	}
 	return roles, nil
+}
+
+func (r *RBACService) GetAllRolesWithPagination(page, pageSize int, searchFilter, statusFilter string, isSystemFilter *bool, sortField, sortOrder string) ([]models.Role, int, error) {
+	var roles []models.Role
+	var total int64
+
+	query := r.db.Model(&models.Role{})
+
+	// Apply search filter
+	if searchFilter != "" {
+		query = query.Where("name LIKE ? OR display_name LIKE ?", "%"+searchFilter+"%", "%"+searchFilter+"%")
+	}
+
+	// Apply status filter
+	if statusFilter != "" {
+		switch statusFilter {
+		case "active":
+			query = query.Where("is_active = ?", true)
+		case "inactive":
+			query = query.Where("is_active = ?", false)
+		}
+	}
+
+	// Apply is_system filter
+	if isSystemFilter != nil {
+		query = query.Where("is_system = ?", *isSystemFilter)
+	}
+
+	// Count total records
+	if err := query.Count(&total).Error; err != nil {
+		return nil, 0, fmt.Errorf("failed to count roles: %w", err)
+	}
+
+	// Apply sorting
+	if sortField != "" {
+		allowedSortFields := map[string]bool{
+			"name":         true,
+			"display_name": true,
+			"created_at":   true,
+		}
+		if allowedSortFields[sortField] {
+			query = query.Order(sortField + " " + sortOrder)
+		} else {
+			query = query.Order("created_at " + sortOrder)
+		}
+	} else {
+		query = query.Order("created_at " + sortOrder)
+	}
+
+	// Apply pagination
+	offset := (page - 1) * pageSize
+	query = query.Offset(offset).Limit(pageSize)
+
+	if err := query.Find(&roles).Error; err != nil {
+		return nil, 0, fmt.Errorf("failed to get roles: %w", err)
+	}
+
+	return roles, int(total), nil
 }
 
 func (r *RBACService) GetActiveRoles() ([]models.Role, error) {

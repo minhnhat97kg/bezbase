@@ -4,25 +4,59 @@ import RolesList from '../components/rbac/RolesList';
 import RoleForm from '../components/rbac/RoleForm';
 import PermissionManager from '../components/rbac/PermissionManager';
 import UserRoleAssignment from '../components/rbac/UserRoleAssignment';
+import Icon from '../components/common/Icons';
 
 const RoleManagement = () => {
   // Set page title
   useEffect(() => {
     document.title = 'Role Management - BezBase';
   }, []);
-  
+
   const [roles, setRoles] = useState([]);
+  const [pagination, setPagination] = useState({
+    currentPage: 1,
+    pageSize: 10,
+    total: 0,
+    totalPages: 0
+  });
+  const [filters, setFilters] = useState({
+    search: '',
+    status: '',
+    is_system: '',
+    sort: 'created_at',
+    order: 'desc'
+  });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [showForm, setShowForm] = useState(false);
   const [selectedRole, setSelectedRole] = useState(null);
   const [activeTab, setActiveTab] = useState('roles');
-  
-  const fetchRoles = async () => {
+
+  const fetchRoles = async (page = pagination.currentPage) => {
     try {
       setLoading(true);
-      const response = await rbacService.getRoles();
-      setRoles(response.data);
+      const params = {
+        page,
+        page_size: pagination.pageSize,
+        ...filters
+      };
+
+      // Remove empty filters
+      Object.keys(params).forEach(key => {
+        if (params[key] === '' || params[key] === null || params[key] === undefined) {
+          delete params[key];
+        }
+      });
+
+      const response = await rbacService.getRoles(params);
+
+      setRoles(response.data.data);
+      setPagination({
+        currentPage: response.data.page,
+        pageSize: response.data.page_size,
+        total: response.data.total_items,
+        totalPages: response.data.total_pages
+      });
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to fetch roles');
     } finally {
@@ -33,6 +67,10 @@ const RoleManagement = () => {
   useEffect(() => {
     fetchRoles();
   }, []);
+
+  useEffect(() => {
+    fetchRoles(1);
+  }, [filters]);
 
   const handleCreateRole = () => {
     setSelectedRole(null);
@@ -65,6 +103,24 @@ const RoleManagement = () => {
     }
   };
 
+  const handlePageChange = (page) => {
+    fetchRoles(page);
+  };
+
+  const handlePageSizeChange = (pageSize) => {
+    setPagination(prev => ({ ...prev, pageSize, currentPage: 1 }));
+    fetchRoles(1);
+  };
+
+  const handleSort = (field) => {
+    const newOrder = filters.sort === field && filters.order === 'asc' ? 'desc' : 'asc';
+    setFilters(prev => ({ ...prev, sort: field, order: newOrder }));
+  };
+
+  const handleFilterChange = (key, value) => {
+    setFilters(prev => ({ ...prev, [key]: value }));
+  };
+
   const tabs = [
     { id: 'roles', name: 'Roles', icon: 'shield' },
     { id: 'permissions', name: 'Permissions', icon: 'key' },
@@ -73,21 +129,9 @@ const RoleManagement = () => {
 
   const getTabIcon = (iconName) => {
     const icons = {
-      shield: (
-        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-        </svg>
-      ),
-      key: (
-        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
-        </svg>
-      ),
-      users: (
-        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0z" />
-        </svg>
-      ),
+      shield: <Icon name="shield" />,
+      key: <Icon name="key" />,
+      users: <Icon name="users" />,
     };
     return icons[iconName];
   };
@@ -122,11 +166,10 @@ const RoleManagement = () => {
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`py-2 px-1 border-b-2 font-medium text-sm flex items-center space-x-2 ${
-                activeTab === tab.id
-                  ? 'border-blue-500 text-blue-600 dark:text-blue-400'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
-              }`}
+              className={`py-2 px-1 border-b-2 font-medium text-sm flex items-center space-x-2 ${activeTab === tab.id
+                ? 'border-blue-500 text-blue-600 dark:text-blue-400'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
+                }`}
             >
               {getTabIcon(tab.icon)}
               <span>{tab.name}</span>
@@ -148,11 +191,53 @@ const RoleManagement = () => {
                 Create Role
               </button>
             </div>
+
+            {/* Search and Filter Controls */}
+            <div className="mb-6 space-y-4">
+              <div className="flex flex-col sm:flex-row gap-4">
+                <div className="flex-1">
+                  <input
+                    type="text"
+                    placeholder="Search roles..."
+                    value={filters.search}
+                    onChange={(e) => handleFilterChange('search', e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white"
+                  />
+                </div>
+                <div className="flex gap-2">
+                  <select
+                    value={filters.status}
+                    onChange={(e) => handleFilterChange('status', e.target.value)}
+                    className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white"
+                  >
+                    <option value="">All Status</option>
+                    <option value="active">Active</option>
+                    <option value="inactive">Inactive</option>
+                  </select>
+                  <select
+                    value={filters.is_system}
+                    onChange={(e) => handleFilterChange('is_system', e.target.value)}
+                    className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white"
+                  >
+                    <option value="">All Types</option>
+                    <option value="true">System</option>
+                    <option value="false">Custom</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
             <RolesList
               roles={roles}
               onEdit={handleEditRole}
               onDelete={handleDeleteRole}
               loading={loading}
+              pagination={pagination}
+              onPageChange={handlePageChange}
+              onPageSizeChange={handlePageSizeChange}
+              onSort={handleSort}
+              sortField={filters.sort}
+              sortOrder={filters.order}
             />
           </div>
         )}
