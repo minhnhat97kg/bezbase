@@ -1,0 +1,87 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: bezbase_postgres
+    environment:
+      POSTGRES_DB: bezbase
+      POSTGRES_USER: bezbase_user
+      POSTGRES_PASSWORD: bezbase_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql
+      - ./database/migrations:/docker-entrypoint-initdb.d/migrations
+    networks:
+      - bezbase_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U bezbase_user -d bezbase"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  # Backend API
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: bezbase_backend
+    environment:
+      DATABASE_URL: postgres://bezbase_user:bezbase_password@postgres:5432/bezbase?sslmode=disable
+      JWT_SECRET: your-secret-key-change-this-in-production
+      PORT: 8080
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - bezbase_network
+    volumes:
+      - ./backend:/app
+    restart: unless-stopped
+
+  # Frontend React App
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: bezbase_frontend
+    environment:
+      REACT_APP_API_URL: http://localhost:8080/api
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+    networks:
+      - bezbase_network
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    restart: unless-stopped
+
+  # Nginx Reverse Proxy (optional)
+  nginx:
+    image: nginx:alpine
+    container_name: bezbase_nginx
+    ports:
+      - "80:80"
+    volumes:
+      - ./docker/nginx.conf:/etc/nginx/nginx.conf
+    depends_on:
+      - frontend
+      - backend
+    networks:
+      - bezbase_network
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+
+networks:
+  bezbase_network:
+    driver: bridge
+

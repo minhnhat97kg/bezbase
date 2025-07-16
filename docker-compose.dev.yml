@@ -1,0 +1,48 @@
+# Development docker-compose file
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: bezbase_postgres_dev
+    environment:
+      POSTGRES_DB: bezbase
+      POSTGRES_USER: bezbase_user
+      POSTGRES_PASSWORD: bezbase_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_dev_data:/var/lib/postgresql/data
+      - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql
+      - ./database/migrations:/docker-entrypoint-initdb.d/migrations
+    networks:
+      - bezbase_network
+
+  # Backend API (development mode)
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.dev
+    container_name: bezbase_backend_dev
+    environment:
+      DATABASE_URL: postgres://bezbase_user:bezbase_password@postgres:5432/bezbase?sslmode=disable
+      JWT_SECRET: your-secret-key-change-this-in-production
+      PORT: 8080
+    ports:
+      - "8080:8080"
+    depends_on:
+      - postgres
+    networks:
+      - bezbase_network
+    volumes:
+      - ./backend:/app
+    restart: unless-stopped
+
+volumes:
+  postgres_dev_data:
+
+networks:
+  bezbase_network:
+    driver: bridge
+

@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(mkdir:*)",
+      "Bash(go mod:*)",
+      "Bash(go build:*)",
+      "Bash(docker compose:*)",
+      "Bash(DATABASE_URL=\"postgresql://bezbase_user:bezbase_password@localhost:5432/bezbase?sslmode=disable\" ./migrate-tool -action=status)",
+      "Bash(docker volume rm:*)",
+      "Bash(docker exec:*)"
+    ],
+    "deny": []
+  }
+}
