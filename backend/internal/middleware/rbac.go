@@ -5,12 +5,13 @@ import (
 	"net/http"
 
 	"bezbase/internal/auth"
-	"bezbase/internal/services/rbac"
+	"bezbase/internal/models"
+	"bezbase/internal/services"
 
 	"github.com/labstack/echo/v4"
 )
 
-func RBACMiddleware(rbacService *rbac.RBACService, resource, action string) echo.MiddlewareFunc {
+func RBACMiddleware(rbacService *services.RBACService, resource models.ResourceType, action models.ActionType) echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
 			// Get user claims from JWT middleware
@@ -20,7 +21,7 @@ func RBACMiddleware(rbacService *rbac.RBACService, resource, action string) echo
 			}
 
 			// Check permission
-			allowed, err := rbacService.CheckPermission(userClaims.UserID, resource, action)
+			allowed, err := rbacService.CheckPermission(userClaims.UserID, resource.String(), action.String())
 			if err != nil {
 				return echo.NewHTTPError(http.StatusInternalServerError, fmt.Sprintf("Permission check failed: %v", err))
 			}
@@ -34,11 +35,11 @@ func RBACMiddleware(rbacService *rbac.RBACService, resource, action string) echo
 	}
 }
 
-func RequirePermission(rbacService *rbac.RBACService, resource, action string) echo.MiddlewareFunc {
+func RequirePermission(rbacService *services.RBACService, resource models.ResourceType, action models.ActionType) echo.MiddlewareFunc {
 	return RBACMiddleware(rbacService, resource, action)
 }
 
-func RequireRole(rbacService *rbac.RBACService, role string) echo.MiddlewareFunc {
+func RequireRole(rbacService *services.RBACService, role string) echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
 			userClaims, ok := c.Get("user").(*auth.Claims)
@@ -78,7 +79,7 @@ func RequireRole(rbacService *rbac.RBACService, role string) echo.MiddlewareFunc
 	}
 }
 
-func RequireAnyRole(rbacService *rbac.RBACService, roles ...string) echo.MiddlewareFunc {
+func RequireAnyRole(rbacService *services.RBACService, roles ...string) echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
 			userClaims, ok := c.Get("user").(*auth.Claims)
@@ -113,7 +114,7 @@ func RequireAnyRole(rbacService *rbac.RBACService, roles ...string) echo.Middlew
 	}
 }
 
-func RequireAllRoles(rbacService *rbac.RBACService, roles ...string) echo.MiddlewareFunc {
+func RequireAllRoles(rbacService *services.RBACService, roles ...string) echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
 			userClaims, ok := c.Get("user").(*auth.Claims)
@@ -145,6 +146,6 @@ func RequireAllRoles(rbacService *rbac.RBACService, roles ...string) echo.Middle
 	}
 }
 
-func CheckPermissionForUser(rbacService *rbac.RBACService, userID uint, resource, action string) (bool, error) {
+func CheckPermissionForUser(rbacService *services.RBACService, userID uint, resource, action string) (bool, error) {
 	return rbacService.CheckPermission(userID, resource, action)
 }

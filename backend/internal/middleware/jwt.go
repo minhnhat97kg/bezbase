@@ -4,7 +4,7 @@ import (
 	"net/http"
 	"strings"
 
-	"bezbase/internal/auth"
+	"bezbase/internal/pkg/auth"
 
 	"github.com/labstack/echo/v4"
 )
@@ -32,4 +32,3 @@ func JWTMiddleware(secret string) echo.MiddlewareFunc {
 		}
 	}
 }
-

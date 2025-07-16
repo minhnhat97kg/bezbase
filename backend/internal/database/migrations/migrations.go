@@ -111,36 +111,6 @@ func GetMigrations() []*gormigrate.Migration {
 		{
 			ID: "20250716_002_add_casbin_policies",
 			Migrate: func(tx *gorm.DB) error {
-				// Create casbin_rule table for storing policies
-				type CasbinRule struct {
-					ID    uint   `gorm:"primaryKey"`
-					Ptype string `gorm:"size:100"`
-					V0    string `gorm:"size:100"`
-					V1    string `gorm:"size:100"`
-					V2    string `gorm:"size:100"`
-					V3    string `gorm:"size:100"`
-					V4    string `gorm:"size:100"`
-					V5    string `gorm:"size:100"`
-				}
-
-				if err := tx.AutoMigrate(&CasbinRule{}); err != nil {
-					return err
-				}
-
-				// Add indexes for better performance
-				indexes := []string{
-					"CREATE INDEX IF NOT EXISTS idx_casbin_rule_ptype ON casbin_rules(ptype)",
-					"CREATE INDEX IF NOT EXISTS idx_casbin_rule_v0 ON casbin_rules(v0)",
-					"CREATE INDEX IF NOT EXISTS idx_casbin_rule_v1 ON casbin_rules(v1)",
-					"CREATE INDEX IF NOT EXISTS idx_casbin_rule_v2 ON casbin_rules(v2)",
-				}
-
-				for _, query := range indexes {
-					if err := tx.Exec(query).Error; err != nil {
-						return err
-					}
-				}
-
 				// Create roles table
 				type Role struct {
 					ID          uint         `gorm:"primaryKey"`
@@ -159,7 +129,7 @@ func GetMigrations() []*gormigrate.Migration {
 				}
 
 				// Add indexes for better performance
-				indexes = []string{
+				indexes := []string{
 					"CREATE INDEX IF NOT EXISTS idx_roles_name ON roles(name)",
 					"CREATE INDEX IF NOT EXISTS idx_roles_is_active ON roles(is_active)",
 					"CREATE INDEX IF NOT EXISTS idx_roles_is_system ON roles(is_system)",
@@ -184,19 +154,6 @@ func GetMigrations() []*gormigrate.Migration {
 
 				for _, role := range defaultRoles {
 					if err := tx.Create(&role).Error; err != nil {
-						return err
-					}
-				}
-				// Create default rules for admin role
-				defaultRules := []CasbinRule{
-					{
-						Ptype: "p",
-						V0:    "admin",
-						V1:    "*",
-					},
-				}
-				for _, rule := range defaultRules {
-					if err := tx.Create(&rule).Error; err != nil {
 						return err
 					}
 				}
@@ -232,4 +189,3 @@ func GetInitialMigration() *gormigrate.Migration {
 		},
 	}
 }
-

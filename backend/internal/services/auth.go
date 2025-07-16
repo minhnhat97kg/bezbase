@@ -4,9 +4,9 @@ import (
 	"errors"
 	"time"
 
-	"bezbase/internal/auth"
 	"bezbase/internal/dto"
 	"bezbase/internal/models"
+	"bezbase/internal/pkg/auth"
 
 	"gorm.io/gorm"
 )

@@ -1,4 +1,4 @@
-package rbac
+package services
 
 import (
 	"fmt"
@@ -20,7 +20,7 @@ type RBACService struct {
 }
 
 func NewRBACService(db *gorm.DB) (*RBACService, error) {
-	adapter, err := gormadapter.NewAdapterByDB(db)
+	adapter, err := gormadapter.NewAdapterByDBUseTableName(db, "", "rule")
 	if err != nil {
 		return nil, fmt.Errorf("failed to create casbin adapter: %w", err)
 	}
@@ -333,16 +333,9 @@ func (r *RBACService) GetPermissionsForRole(role string) ([][]string, error) {
 	return r.enforcer.GetPermissionsForUser(role)
 }
 
-type PermissionResponse struct {
-	ID       int    `json:"id"`
-	Role     string `json:"role"`
-	Resource string `json:"resource"`
-	Action   string `json:"action"`
-}
-
 func (r *RBACService) GetAllPermissions(page, pageSize int, roleFilter, resourceFilter, actionFilter, sortField, sortOrder string) ([]dto.PermissionResponse, int, error) {
 	// Query casbin_rule table directly for permissions (ptype = 'p')
-	query := r.db.Table("casbin_rule").Where("ptype = 'p'")
+	query := r.db.Model(&models.Rule{}).Where("ptype = 'p'")
 
 	// Apply filters
 	if roleFilter != "" {
@@ -376,23 +369,16 @@ func (r *RBACService) GetAllPermissions(page, pageSize int, roleFilter, resource
 		}
 	}
 
-	// Apply pagination and get results
-	var casbinRules []struct {
-		ID int    `json:"id"`
-		V0 string `json:"v0"`
-		V1 string `json:"v1"`
-		V2 string `json:"v2"`
-	}
-
+	rules := make([]models.Rule, 0)
 	offset := (page - 1) * pageSize
 	if err := query.Order(orderClause).Offset(offset).Limit(pageSize).
-		Select("id, v0, v1, v2").Find(&casbinRules).Error; err != nil {
+		Select("id, v0, v1, v2").Find(&rules).Error; err != nil {
 		return nil, 0, fmt.Errorf("failed to get permissions: %w", err)
 	}
 
 	// Convert to PermissionResponse format
-	permissions := make([]dto.PermissionResponse, len(casbinRules))
-	for i, rule := range casbinRules {
+	permissions := make([]dto.PermissionResponse, len(rules))
+	for i, rule := range rules {
 		permissions[i] = dto.PermissionResponse{
 			ID:       rule.ID,
 			Role:     rule.V0,

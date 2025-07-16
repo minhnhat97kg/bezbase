@@ -9,7 +9,7 @@ import (
 	"bezbase/internal/docs"
 	"bezbase/internal/handlers"
 	"bezbase/internal/middleware"
-	"bezbase/internal/services/rbac"
+	"bezbase/internal/models"
 
 	"bezbase/internal/services"
 
@@ -54,21 +54,69 @@ func main() {
 	e.Use(echomiddleware.CORS())
 
 	// Initialize RBAC service
-	rbacService, err := rbac.NewRBACService(db)
+	rbacService, err := services.NewRBACService(db)
 	if err != nil {
 		log.Fatal("Failed to initialize RBAC service:", err)
 	}
-
-	// Initialize services
 	authService := services.NewAuthService(db, cfg.JWTSecret)
 	userService := services.NewUserService(db)
 
 	// Initialize handlers
-	h := handlers.NewHandler(authService, userService)
+	commonHandler := handlers.NewCommonHandler()
 	rbacHandler := handlers.NewRBACHandler(rbacService)
+	userHandler := handlers.NewUserHandler(userService)
+	authHandler := handlers.NewAuthHandler(authService)
 
 	// Routes
-	setupRoutes(e, h, rbacHandler, rbacService, cfg.JWTSecret)
+
+	// Public routes
+	api := e.Group("/api")
+
+	// Auth routes
+	auth := api.Group("/auth")
+	auth.POST("/register", authHandler.Register)
+	auth.POST("/login", authHandler.Login)
+
+	// Protected routes
+	apiV1 := api.Group("/v1")
+	apiV1.Use(middleware.JWTMiddleware(cfg.JWTSecret))
+
+	// Profile routes (users can access their own profile)
+	apiV1.GET("/profile", userHandler.GetProfile, middleware.RequirePermission(rbacService, models.ResourceTypeProfile, models.ActionTypeCreate))
+	apiV1.PUT("/profile", userHandler.UpdateProfile, middleware.RequirePermission(rbacService, models.ResourceTypeProfile, models.ActionTypeUpdate))
+
+	// User management routes (admin only)
+	userGroup := apiV1.Group("/users")
+	// userGroup.Use(middleware.RequirePermission(rbacService,models.ResourceTypeUser, models.ActionTypeAll))
+	userGroup.GET("", userHandler.GetUsers, middleware.RequirePermission(rbacService, models.ResourceTypeUser, models.ActionTypeRead))
+
+	// RBAC management routes (admin only)
+	rbacGroup := apiV1.Group("/rbac")
+	// rbacGroup.Use(middleware.RequireRole(rbacService, "admin"))
+
+	// Role management
+	rbacGroup.POST("/roles", rbacHandler.CreateRole,
+		middleware.RequirePermission(rbacService, models.ResourceTypePermission, models.ActionTypeCreate))
+	rbacGroup.GET("/roles", rbacHandler.GetRoles, middleware.RequirePermission(rbacService, models.ResourceTypePermission, models.ActionTypeRead))
+	rbacGroup.GET("/roles/:role_id", rbacHandler.GetRole, middleware.RequirePermission(rbacService, models.ResourceTypePermission, models.ActionTypeRead))
+	rbacGroup.PUT("/roles/:role_id", rbacHandler.UpdateRole, middleware.RequirePermission(rbacService, models.ResourceTypePermission, models.ActionTypeUpdate))
+	rbacGroup.DELETE("/roles/:role", rbacHandler.DeleteRole, middleware.RequirePermission(rbacService, models.ResourceTypePermission, models.ActionTypeDelete))
+	rbacGroup.GET("/roles/:role/users", rbacHandler.GetUsersWithRole, middleware.RequirePermission(rbacService, models.ResourceTypePermission, models.ActionTypeRead))
+	rbacGroup.GET("/roles/:role/permissions", rbacHandler.GetRolePermissions, middleware.RequirePermission(rbacService, models.ResourceTypePermission, models.ActionTypeRead))
+
+	// User role management
+	rbacGroup.POST("/users/assign-role", rbacHandler.AssignRole, middleware.RequirePermission(rbacService, models.ResourceTypePermission, models.ActionTypeUpdate))
+	rbacGroup.POST("/users/remove-role", rbacHandler.RemoveRole, middleware.RequirePermission(rbacService, models.ResourceTypePermission, models.ActionTypeUpdate))
+	rbacGroup.GET("/users/:user_id/roles", rbacHandler.GetUserRoles, middleware.RequirePermission(rbacService, models.ResourceTypePermission, models.ActionTypeRead))
+
+	// Permission management
+	rbacGroup.GET("/permissions", rbacHandler.GetPermissions, middleware.RequirePermission(rbacService, models.ResourceTypePermission, models.ActionTypeRead))
+	rbacGroup.POST("/permissions", rbacHandler.AddPermission, middleware.RequirePermission(rbacService, models.ResourceTypePermission, models.ActionTypeCreate))
+	rbacGroup.DELETE("/permissions", rbacHandler.RemovePermission, middleware.RequirePermission(rbacService, models.ResourceTypePermission, models.ActionTypeDelete))
+	rbacGroup.GET("/users/:user_id/check-permission", rbacHandler.CheckPermission)
+
+	// Health check
+	api.GET("/health", commonHandler.HealthCheck)
 
 	// Start server
 	port := os.Getenv("PORT")
@@ -78,54 +126,4 @@ func main() {
 
 	log.Printf("Server starting on port %s", port)
 	log.Fatal(e.Start(":" + port))
-}
-
-func setupRoutes(e *echo.Echo, h *handlers.Handler, rbacHandler *handlers.RBACHandler, rbacService *rbac.RBACService, jwtSecret string) {
-	// Public routes
-	api := e.Group("/api")
-
-	// Auth routes
-	auth := api.Group("/auth")
-	auth.POST("/register", h.Register)
-	auth.POST("/login", h.Login)
-
-	// Protected routes
-	apiV1 := api.Group("/v1")
-	apiV1.Use(middleware.JWTMiddleware(jwtSecret))
-
-	// Profile routes (users can access their own profile)
-	apiV1.GET("/profile", h.GetProfile, middleware.RequirePermission(rbacService, "profile", "read"))
-	apiV1.PUT("/profile", h.UpdateProfile, middleware.RequirePermission(rbacService, "profile", "update"))
-
-	// User management routes (admin only)
-	userGroup := apiV1.Group("/users")
-	userGroup.Use(middleware.RequireRole(rbacService, "admin"))
-	userGroup.GET("", h.GetUsers)
-
-	// RBAC management routes (admin only)
-	rbacGroup := apiV1.Group("/rbac")
-	rbacGroup.Use(middleware.RequireRole(rbacService, "admin"))
-
-	// Role management
-	rbacGroup.POST("/roles", rbacHandler.CreateRole)
-	rbacGroup.GET("/roles", rbacHandler.GetRoles)
-	rbacGroup.GET("/roles/:role_id", rbacHandler.GetRole)
-	rbacGroup.PUT("/roles/:role_id", rbacHandler.UpdateRole)
-	rbacGroup.DELETE("/roles/:role", rbacHandler.DeleteRole)
-	rbacGroup.GET("/roles/:role/users", rbacHandler.GetUsersWithRole)
-	rbacGroup.GET("/roles/:role/permissions", rbacHandler.GetRolePermissions)
-
-	// User role management
-	rbacGroup.POST("/users/assign-role", rbacHandler.AssignRole)
-	rbacGroup.POST("/users/remove-role", rbacHandler.RemoveRole)
-	rbacGroup.GET("/users/:user_id/roles", rbacHandler.GetUserRoles)
-
-	// Permission management
-	rbacGroup.GET("/permissions", rbacHandler.GetPermissions)
-	rbacGroup.POST("/permissions", rbacHandler.AddPermission)
-	rbacGroup.DELETE("/permissions", rbacHandler.RemovePermission)
-	rbacGroup.GET("/users/:user_id/check-permission", rbacHandler.CheckPermission)
-
-	// Health check
-	api.GET("/health", h.HealthCheck)
 }
