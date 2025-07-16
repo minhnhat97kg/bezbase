@@ -12,7 +12,7 @@ type UserInfo struct {
 	FirstName   string         `json:"first_name" gorm:"not null"`
 	LastName    string         `json:"last_name" gorm:"not null"`
 	Email       string         `json:"email" gorm:"not null;uniqueIndex"` // Primary email for display
-	Avatar      string         `json:"avatar" gorm:""`                     // Profile picture URL
+	AvatarURL   string         `json:"avatar_url" gorm:""`                 // Profile picture URL
 	Bio         string         `json:"bio" gorm:""`                        // User biography
 	Location    string         `json:"location" gorm:""`                   // User location
 	Website     string         `json:"website" gorm:""`                    // Personal website

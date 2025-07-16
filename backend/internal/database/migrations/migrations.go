@@ -15,19 +15,19 @@ func GetMigrations() []*gormigrate.Migration {
 			Migrate: func(tx *gorm.DB) error {
 				// Create Users table
 				type User struct {
-					ID            uint           `gorm:"primaryKey"`
-					Status        string         `gorm:"not null;default:'pending'"`
-					EmailVerified bool           `gorm:"default:false"`
-					LastLoginAt   *interface{}   `gorm:"type:timestamp"`
-					CreatedAt     interface{}    `gorm:"type:timestamp;not null;default:CURRENT_TIMESTAMP"`
-					UpdatedAt     interface{}    `gorm:"type:timestamp;not null;default:CURRENT_TIMESTAMP"`
-					DeletedAt     *interface{}   `gorm:"type:timestamp;index"`
+					ID            uint         `gorm:"primaryKey"`
+					Status        string       `gorm:"not null;default:'pending'"`
+					EmailVerified bool         `gorm:"default:false"`
+					LastLoginAt   *interface{} `gorm:"type:timestamp"`
+					CreatedAt     interface{}  `gorm:"type:timestamp;not null;default:CURRENT_TIMESTAMP"`
+					UpdatedAt     interface{}  `gorm:"type:timestamp;not null;default:CURRENT_TIMESTAMP"`
+					DeletedAt     *interface{} `gorm:"type:timestamp;index"`
 				}
-				
+
 				if err := tx.AutoMigrate(&User{}); err != nil {
 					return err
 				}
-				
+
 				// Create UserInfo table
 				type UserInfo struct {
 					ID          uint         `gorm:"primaryKey"`
@@ -48,43 +48,43 @@ func GetMigrations() []*gormigrate.Migration {
 					UpdatedAt   interface{}  `gorm:"type:timestamp;not null;default:CURRENT_TIMESTAMP"`
 					DeletedAt   *interface{} `gorm:"type:timestamp;index"`
 				}
-				
+
 				if err := tx.AutoMigrate(&UserInfo{}); err != nil {
 					return err
 				}
-				
+
 				// Create AuthProviders table with user_name (not email)
 				type AuthProvider struct {
-					ID         uint        `gorm:"primaryKey"`
-					UserID     uint        `gorm:"not null;index"`
-					Provider   string      `gorm:"not null;index"`
-					ProviderID string      `gorm:"not null"`
-					UserName   string      `gorm:"not null;index"` // Username or email for authentication
-					Password   string      `gorm:""`
-					Verified   bool        `gorm:"default:false"`
-					CreatedAt  interface{} `gorm:"type:timestamp;not null;default:CURRENT_TIMESTAMP"`
-					UpdatedAt  interface{} `gorm:"type:timestamp;not null;default:CURRENT_TIMESTAMP"`
+					ID         uint         `gorm:"primaryKey"`
+					UserID     uint         `gorm:"not null;index"`
+					Provider   string       `gorm:"not null;index"`
+					ProviderID string       `gorm:"not null"`
+					UserName   string       `gorm:"not null;index"` // Username or email for authentication
+					Password   string       `gorm:""`
+					Verified   bool         `gorm:"default:false"`
+					CreatedAt  interface{}  `gorm:"type:timestamp;not null;default:CURRENT_TIMESTAMP"`
+					UpdatedAt  interface{}  `gorm:"type:timestamp;not null;default:CURRENT_TIMESTAMP"`
 					DeletedAt  *interface{} `gorm:"type:timestamp;index"`
 				}
-				
+
 				if err := tx.AutoMigrate(&AuthProvider{}); err != nil {
 					return err
 				}
-				
+
 				// Add foreign key constraints
 				if err := tx.Exec("ALTER TABLE user_info ADD CONSTRAINT fk_user_info_user_id FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE").Error; err != nil {
 					return err
 				}
-				
+
 				if err := tx.Exec("ALTER TABLE auth_providers ADD CONSTRAINT fk_auth_providers_user_id FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE").Error; err != nil {
 					return err
 				}
-				
+
 				// Add composite unique constraint for user_id + provider
 				if err := tx.Exec("CREATE UNIQUE INDEX IF NOT EXISTS idx_auth_providers_user_provider ON auth_providers(user_id, provider)").Error; err != nil {
 					return err
 				}
-				
+
 				// Add additional indexes for performance
 				indexes := []string{
 					"CREATE INDEX IF NOT EXISTS idx_users_status ON users(status)",
@@ -94,18 +94,117 @@ func GetMigrations() []*gormigrate.Migration {
 					"CREATE INDEX IF NOT EXISTS idx_auth_providers_provider ON auth_providers(provider)",
 					"CREATE INDEX IF NOT EXISTS idx_auth_providers_provider_id ON auth_providers(provider_id)",
 				}
-				
+
 				for _, query := range indexes {
 					if err := tx.Exec(query).Error; err != nil {
 						return err
 					}
 				}
-				
+
 				return nil
 			},
 			Rollback: func(tx *gorm.DB) error {
 				// Drop tables in reverse order due to foreign key constraints
 				return tx.Migrator().DropTable("auth_providers", "user_info", "users")
+			},
+		},
+		{
+			ID: "20250716_002_add_casbin_policies",
+			Migrate: func(tx *gorm.DB) error {
+				// Create casbin_rule table for storing policies
+				type CasbinRule struct {
+					ID    uint   `gorm:"primaryKey"`
+					Ptype string `gorm:"size:100"`
+					V0    string `gorm:"size:100"`
+					V1    string `gorm:"size:100"`
+					V2    string `gorm:"size:100"`
+					V3    string `gorm:"size:100"`
+					V4    string `gorm:"size:100"`
+					V5    string `gorm:"size:100"`
+				}
+
+				if err := tx.AutoMigrate(&CasbinRule{}); err != nil {
+					return err
+				}
+
+				// Add indexes for better performance
+				indexes := []string{
+					"CREATE INDEX IF NOT EXISTS idx_casbin_rule_ptype ON casbin_rules(ptype)",
+					"CREATE INDEX IF NOT EXISTS idx_casbin_rule_v0 ON casbin_rules(v0)",
+					"CREATE INDEX IF NOT EXISTS idx_casbin_rule_v1 ON casbin_rules(v1)",
+					"CREATE INDEX IF NOT EXISTS idx_casbin_rule_v2 ON casbin_rules(v2)",
+				}
+
+				for _, query := range indexes {
+					if err := tx.Exec(query).Error; err != nil {
+						return err
+					}
+				}
+
+				// Create roles table
+				type Role struct {
+					ID          uint         `gorm:"primaryKey"`
+					Name        string       `gorm:"uniqueIndex;not null;size:100"`
+					DisplayName string       `gorm:"not null;size:255"`
+					Description string       `gorm:"size:500"`
+					IsSystem    bool         `gorm:"default:false"`
+					IsActive    bool         `gorm:"default:true"`
+					CreatedAt   interface{}  `gorm:"type:timestamp;not null;default:CURRENT_TIMESTAMP"`
+					UpdatedAt   interface{}  `gorm:"type:timestamp;not null;default:CURRENT_TIMESTAMP"`
+					DeletedAt   *interface{} `gorm:"type:timestamp;index"`
+				}
+
+				if err := tx.AutoMigrate(&Role{}); err != nil {
+					return err
+				}
+
+				// Add indexes for better performance
+				indexes = []string{
+					"CREATE INDEX IF NOT EXISTS idx_roles_name ON roles(name)",
+					"CREATE INDEX IF NOT EXISTS idx_roles_is_active ON roles(is_active)",
+					"CREATE INDEX IF NOT EXISTS idx_roles_is_system ON roles(is_system)",
+				}
+
+				for _, query := range indexes {
+					if err := tx.Exec(query).Error; err != nil {
+						return err
+					}
+				}
+
+				// Insert default roles
+				defaultRoles := []Role{
+					{
+						Name:        "admin",
+						DisplayName: "Administrator",
+						Description: "Full system access with all permissions",
+						IsSystem:    true,
+						IsActive:    true,
+					},
+				}
+
+				for _, role := range defaultRoles {
+					if err := tx.Create(&role).Error; err != nil {
+						return err
+					}
+				}
+				// Create default rules for admin role
+				defaultRules := []CasbinRule{
+					{
+						Ptype: "p",
+						V0:    "admin",
+						V1:    "*",
+					},
+				}
+				for _, rule := range defaultRules {
+					if err := tx.Create(&rule).Error; err != nil {
+						return err
+					}
+				}
+
+				return nil
+			},
+			Rollback: func(tx *gorm.DB) error {
+				return tx.Migrator().DropTable("roles")
 			},
 		},
 	}
@@ -133,3 +232,4 @@ func GetInitialMigration() *gormigrate.Migration {
 		},
 	}
 }
+

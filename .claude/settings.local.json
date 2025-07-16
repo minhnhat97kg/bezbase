@@ -7,7 +7,16 @@
       "Bash(docker compose:*)",
       "Bash(DATABASE_URL=\"postgresql://bezbase_user:bezbase_password@localhost:5432/bezbase?sslmode=disable\" ./migrate-tool -action=status)",
       "Bash(docker volume rm:*)",
-      "Bash(docker exec:*)"
+      "Bash(docker exec:*)",
+      "Bash(docker-compose logs:*)",
+      "Bash(go run:*)",
+      "Bash(DATABASE_URL=\"postgres://bezbase_user:bezbase_password@localhost:5432/bezbase?sslmode=disable\" JWT_SECRET=\"your-secret-key-change-this-in-production\" PORT=\"8080\" go run cmd/main.go)",
+      "Bash(docker-compose:*)",
+      "Bash(bash:*)",
+      "Bash(curl:*)",
+      "Bash(ls:*)",
+      "Bash(pkill:*)",
+      "Bash(npm start)"
     ],
     "deny": []
   }

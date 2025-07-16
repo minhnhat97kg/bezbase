@@ -59,11 +59,79 @@ export const userService = {
   updateProfile: (userData) => {
     return api.put('/v1/profile', userData);
   },
+  
+  getUsers: (searchTerm = '') => {
+    const params = searchTerm ? { search: searchTerm } : {};
+    return api.get('/v1/users', { params });
+  },
 };
 
 export const healthService = {
   check: () => {
     return api.get('/health');
+  },
+};
+
+export const rbacService = {
+  // Role management
+  getRoles: () => {
+    return api.get('/v1/rbac/roles');
+  },
+  
+  getRole: (roleId) => {
+    return api.get(`/v1/rbac/roles/${roleId}`);
+  },
+  
+  createRole: (roleData) => {
+    return api.post('/v1/rbac/roles', roleData);
+  },
+  
+  updateRole: (roleId, roleData) => {
+    return api.put(`/v1/rbac/roles/${roleId}`, roleData);
+  },
+  
+  deleteRole: (roleName) => {
+    return api.delete(`/v1/rbac/roles/${roleName}`);
+  },
+  
+  // Permission management
+  getPermissions: (params = {}) => {
+    return api.get('/v1/rbac/permissions', { params });
+  },
+  
+  getRolePermissions: (roleName) => {
+    return api.get(`/v1/rbac/roles/${roleName}/permissions`);
+  },
+  
+  addPermission: (permissionData) => {
+    return api.post('/v1/rbac/permissions', permissionData);
+  },
+  
+  removePermission: (permissionData) => {
+    return api.delete('/v1/rbac/permissions', { data: permissionData });
+  },
+  
+  // User role management
+  getUserRoles: (userId) => {
+    return api.get(`/v1/rbac/users/${userId}/roles`);
+  },
+  
+  assignRole: (assignmentData) => {
+    return api.post('/v1/rbac/users/assign-role', assignmentData);
+  },
+  
+  removeRole: (removalData) => {
+    return api.post('/v1/rbac/users/remove-role', removalData);
+  },
+  
+  getUsersWithRole: (roleName) => {
+    return api.get(`/v1/rbac/roles/${roleName}/users`);
+  },
+  
+  checkPermission: (userId, resource, action) => {
+    return api.get(`/v1/rbac/users/${userId}/check-permission`, {
+      params: { resource, action }
+    });
   },
 };
 

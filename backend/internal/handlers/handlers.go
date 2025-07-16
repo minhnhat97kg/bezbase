@@ -4,10 +4,8 @@ import (
 	"net/http"
 
 	"bezbase/internal/auth"
-	"bezbase/internal/models"
+	"bezbase/internal/dto"
 	"bezbase/internal/services"
-
-	"github.com/casbin/casbin/v2"
 
 	"github.com/labstack/echo/v4"
 )
@@ -15,27 +13,17 @@ import (
 type Handler struct {
 	authService *services.AuthService
 	userService *services.UserService
-	enforcer    *casbin.Enforcer
 }
 
 func NewHandler(authService *services.AuthService, userService *services.UserService) *Handler {
 	return &Handler{
 		authService: authService,
 		userService: userService,
-		enforcer:    nil,
-	}
-}
-
-func NewHandlerWithEnforcer(authService *services.AuthService, userService *services.UserService, enforcer *casbin.Enforcer) *Handler {
-	return &Handler{
-		authService: authService,
-		userService: userService,
-		enforcer:    enforcer,
 	}
 }
 
 func (h *Handler) Register(c echo.Context) error {
-	var req models.RegisterRequest
+	var req dto.RegisterRequest
 	if err := c.Bind(&req); err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, "Invalid request body")
 	}
@@ -54,7 +42,7 @@ func (h *Handler) Register(c echo.Context) error {
 }
 
 func (h *Handler) Login(c echo.Context) error {
-	var req models.LoginRequest
+	var req dto.LoginRequest
 	if err := c.Bind(&req); err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, "Invalid request body")
 	}
@@ -86,7 +74,7 @@ func (h *Handler) GetProfile(c echo.Context) error {
 func (h *Handler) UpdateProfile(c echo.Context) error {
 	claims := c.Get("user").(*auth.Claims)
 
-	var req models.UpdateProfileRequest
+	var req dto.UpdateProfileRequest
 	if err := c.Bind(&req); err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, "Invalid request body")
 	}
@@ -97,6 +85,26 @@ func (h *Handler) UpdateProfile(c echo.Context) error {
 	}
 
 	return c.JSON(http.StatusOK, user)
+}
+
+func (h *Handler) GetUsers(c echo.Context) error {
+	// Get search query parameter
+	search := c.QueryParam("search")
+
+	var users []dto.UserResponse
+	var err error
+
+	if search != "" {
+		users, err = h.userService.SearchUsers(search)
+	} else {
+		users, err = h.userService.GetAllUsers()
+	}
+
+	if err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
+	}
+
+	return c.JSON(http.StatusOK, users)
 }
 
 func (h *Handler) HealthCheck(c echo.Context) error {

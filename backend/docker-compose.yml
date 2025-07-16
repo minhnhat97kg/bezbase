@@ -1,0 +1,62 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: bezbase-postgres
+    environment:
+      POSTGRES_DB: bezbase
+      POSTGRES_USER: bezbase_user
+      POSTGRES_PASSWORD: bezbase_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U bezbase_user -d bezbase"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - bezbase-network
+
+  # Backend API
+  backend:
+    build: .
+    container_name: bezbase-backend
+    environment:
+      DATABASE_URL: "postgres://bezbase_user:bezbase_password@postgres:5432/bezbase?sslmode=disable"
+      JWT_SECRET: "your-super-secret-jwt-key-change-this-in-production"
+      PORT: "8080"
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./logs:/app/logs
+    networks:
+      - bezbase-network
+    restart: unless-stopped
+
+  # Redis (optional, for caching)
+  redis:
+    image: redis:7-alpine
+    container_name: bezbase-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - bezbase-network
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  redis_data:
+
+networks:
+  bezbase-network:
+    driver: bridge

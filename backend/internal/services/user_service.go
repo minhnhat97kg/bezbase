@@ -3,6 +3,7 @@ package services
 import (
 	"errors"
 
+	"bezbase/internal/dto"
 	"bezbase/internal/models"
 
 	"gorm.io/gorm"
@@ -19,18 +20,18 @@ func NewUserService(db *gorm.DB) *UserService {
 }
 
 // GetProfile retrieves user profile with all user information
-func (s *UserService) GetProfile(userID uint) (*models.UserResponse, error) {
+func (s *UserService) GetProfile(userID uint) (*dto.UserResponse, error) {
 	var user models.User
 	if err := s.db.Preload("UserInfo").First(&user, userID).Error; err != nil {
 		return nil, errors.New("user not found")
 	}
 
-	response := models.ToUserResponse(&user)
+	response := dto.ToUserResponse(&user)
 	return &response, nil
 }
 
 // UpdateProfile updates user information in UserInfo table
-func (s *UserService) UpdateProfile(userID uint, req models.UpdateProfileRequest) (*models.UserResponse, error) {
+func (s *UserService) UpdateProfile(userID uint, req dto.UpdateProfileRequest) (*dto.UserResponse, error) {
 	// Start transaction for atomic update
 	tx := s.db.Begin()
 	defer func() {
@@ -60,26 +61,14 @@ func (s *UserService) UpdateProfile(userID uint, req models.UpdateProfileRequest
 	if req.LastName != "" {
 		userInfo.LastName = req.LastName
 	}
-	if req.Bio != "" {
-		userInfo.Bio = req.Bio
-	}
-	if req.Location != "" {
-		userInfo.Location = req.Location
-	}
-	if req.Website != "" {
-		userInfo.Website = req.Website
-	}
-	if req.Phone != "" {
-		userInfo.Phone = req.Phone
-	}
-	if req.Gender != "" {
-		userInfo.Gender = req.Gender
+	// if req.AvatarURL != "" {
+	// 	userInfo.AvatarURL = req.AvatarURL
+	// }
+	if req.Language != "" {
+		userInfo.Language = req.Language
 	}
 	if req.Timezone != "" {
 		userInfo.Timezone = req.Timezone
-	}
-	if req.Language != "" {
-		userInfo.Language = req.Language
 	}
 
 	if err := tx.Save(&userInfo).Error; err != nil {
@@ -148,6 +137,46 @@ func (s *UserService) GetUserAuthProviders(userID uint) ([]models.AuthProvider, 
 	}
 
 	return providers, nil
+}
+
+// GetAllUsers returns a list of all users with their basic information
+func (s *UserService) GetAllUsers() ([]dto.UserResponse, error) {
+	var users []models.User
+	if err := s.db.Preload("UserInfo").Find(&users).Error; err != nil {
+		return nil, errors.New("failed to get users")
+	}
+
+	var userResponses []dto.UserResponse
+	for _, user := range users {
+		userResponse := dto.ToUserResponse(&user)
+		userResponses = append(userResponses, userResponse)
+	}
+
+	return userResponses, nil
+}
+
+// SearchUsers searches for users by name or email
+func (s *UserService) SearchUsers(searchTerm string) ([]dto.UserResponse, error) {
+	var users []models.User
+
+	// Search in both UserInfo (first_name, last_name, email) and Users table
+	searchPattern := "%" + searchTerm + "%"
+
+	if err := s.db.Preload("UserInfo").
+		Joins("LEFT JOIN user_info ON users.id = user_info.user_id").
+		Where("user_info.first_name ILIKE ? OR user_info.last_name ILIKE ? OR user_info.email ILIKE ?",
+			searchPattern, searchPattern, searchPattern).
+		Find(&users).Error; err != nil {
+		return nil, errors.New("failed to search users")
+	}
+
+	var userResponses []dto.UserResponse
+	for _, user := range users {
+		userResponse := dto.ToUserResponse(&user)
+		userResponses = append(userResponses, userResponse)
+	}
+
+	return userResponses, nil
 }
 
 // DeleteUser soft deletes a user and related data

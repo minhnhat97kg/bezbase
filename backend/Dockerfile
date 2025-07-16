@@ -4,8 +4,9 @@ FROM golang:1.21-alpine AS builder
 # Set working directory
 WORKDIR /app
 
-# Install dependencies
-RUN apk add --no-cache git
+# Install dependencies and swag CLI
+RUN apk add --no-cache git && \
+    go install github.com/swaggo/swag/cmd/swag@latest
 
 # Copy go mod files
 COPY go.mod go.sum ./
@@ -15,6 +16,9 @@ RUN go mod download
 
 # Copy source code
 COPY . .
+
+# Generate Swagger documentation
+RUN swag init -g cmd/main.go --parseDependency --parseInternal
 
 # Build the application
 RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o main ./cmd/main.go
@@ -31,11 +35,13 @@ RUN addgroup -g 1001 -S appgroup && \
 
 WORKDIR /root/
 
-# Copy binary from builder stage
+# Copy binary and Swagger docs from builder stage
 COPY --from=builder /app/main .
+COPY --from=builder /app/docs ./docs
 
 # Change ownership to non-root user
-RUN chown appuser:appgroup main
+RUN chown -R appuser:appgroup . && \
+    chmod -R 755 ./docs
 
 # Switch to non-root user
 USER appuser

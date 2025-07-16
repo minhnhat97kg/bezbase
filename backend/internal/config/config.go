@@ -2,6 +2,8 @@ package config
 
 import (
 	"os"
+
+	"github.com/joho/godotenv"
 )
 
 type Config struct {
@@ -11,6 +13,8 @@ type Config struct {
 }
 
 func Load() *Config {
+	// Try to load .env file, ignore error if not found
+	_ = godotenv.Load()
 	return &Config{
 		DatabaseURL: getEnvOrDefault("DATABASE_URL", "postgres://user:password@localhost/bezbase?sslmode=disable"),
 		JWTSecret:   getEnvOrDefault("JWT_SECRET", "your-secret-key-change-this-in-production"),
@@ -24,4 +28,3 @@ func getEnvOrDefault(key, defaultValue string) string {
 	}
 	return defaultValue
 }
-

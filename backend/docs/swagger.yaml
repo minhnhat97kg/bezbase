@@ -1,0 +1,546 @@
+definitions:
+  bezbase_internal_models.CreateRoleRequest:
+    properties:
+      description:
+        maxLength: 500
+        type: string
+      display_name:
+        maxLength: 255
+        minLength: 2
+        type: string
+      is_active:
+        type: boolean
+      name:
+        maxLength: 100
+        minLength: 2
+        type: string
+    required:
+    - display_name
+    - name
+    type: object
+  bezbase_internal_models.RoleResponse:
+    properties:
+      created_at:
+        type: string
+      description:
+        type: string
+      display_name:
+        type: string
+      id:
+        type: integer
+      is_active:
+        type: boolean
+      is_system:
+        type: boolean
+      name:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  bezbase_internal_models.UpdateRoleRequest:
+    properties:
+      description:
+        maxLength: 500
+        type: string
+      display_name:
+        maxLength: 255
+        minLength: 2
+        type: string
+      is_active:
+        type: boolean
+    type: object
+  bezbase_internal_rbac.PermissionResponse:
+    properties:
+      action:
+        type: string
+      id:
+        type: integer
+      resource:
+        type: string
+      role:
+        type: string
+    type: object
+  internal_handlers.AssignRoleRequest:
+    properties:
+      role:
+        type: string
+      user_id:
+        type: integer
+    required:
+    - role
+    - user_id
+    type: object
+  internal_handlers.PermissionRequest:
+    properties:
+      action:
+        type: string
+      resource:
+        type: string
+      role:
+        type: string
+    required:
+    - action
+    - resource
+    - role
+    type: object
+  internal_handlers.PermissionsListResponse:
+    properties:
+      page:
+        type: integer
+      page_size:
+        type: integer
+      permissions:
+        items:
+          $ref: '#/definitions/bezbase_internal_rbac.PermissionResponse'
+        type: array
+      total:
+        type: integer
+      total_pages:
+        type: integer
+    type: object
+info:
+  contact: {}
+paths:
+  /api/v1/rbac/permissions:
+    delete:
+      consumes:
+      - application/json
+      parameters:
+      - description: Permission request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/internal_handlers.PermissionRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Remove permission from role
+      tags:
+      - RBAC
+    get:
+      parameters:
+      - description: 'Page number (default: 1)'
+        in: query
+        name: page
+        type: integer
+      - description: 'Page size (default: 10, max: 100)'
+        in: query
+        name: page_size
+        type: integer
+      - description: Filter by role
+        in: query
+        name: role
+        type: string
+      - description: Filter by resource
+        in: query
+        name: resource
+        type: string
+      - description: Filter by action
+        in: query
+        name: action
+        type: string
+      - description: Sort field (role, resource, action)
+        in: query
+        name: sort
+        type: string
+      - description: Sort order (asc, desc)
+        in: query
+        name: order
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_handlers.PermissionsListResponse'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: List all permissions with pagination
+      tags:
+      - RBAC
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Permission request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/internal_handlers.PermissionRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Add permission to role
+      tags:
+      - RBAC
+  /api/v1/rbac/roles:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/bezbase_internal_models.RoleResponse'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Get all roles
+      tags:
+      - RBAC
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Role creation request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/bezbase_internal_models.CreateRoleRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/bezbase_internal_models.RoleResponse'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Create a new role
+      tags:
+      - RBAC
+  /api/v1/rbac/roles/{role_id}:
+    get:
+      parameters:
+      - description: Role ID
+        in: path
+        name: role_id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/bezbase_internal_models.RoleResponse'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Get role by ID
+      tags:
+      - RBAC
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Role ID
+        in: path
+        name: role_id
+        required: true
+        type: string
+      - description: Role update request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/bezbase_internal_models.UpdateRoleRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/bezbase_internal_models.RoleResponse'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Update a role
+      tags:
+      - RBAC
+  /api/v1/rbac/roles/{role}:
+    delete:
+      parameters:
+      - description: Role name
+        in: path
+        name: role
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Delete a role
+      tags:
+      - RBAC
+  /api/v1/rbac/roles/{role}/permissions:
+    get:
+      parameters:
+      - description: Role name
+        in: path
+        name: role
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Get permissions for role
+      tags:
+      - RBAC
+  /api/v1/rbac/roles/{role}/users:
+    get:
+      parameters:
+      - description: Role name
+        in: path
+        name: role
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Get users with specific role
+      tags:
+      - RBAC
+  /api/v1/rbac/users/{user_id}/check-permission:
+    get:
+      parameters:
+      - description: User ID
+        in: path
+        name: user_id
+        required: true
+        type: string
+      - description: Resource name
+        in: query
+        name: resource
+        required: true
+        type: string
+      - description: Action name
+        in: query
+        name: action
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Check user permission
+      tags:
+      - RBAC
+  /api/v1/rbac/users/{user_id}/roles:
+    get:
+      parameters:
+      - description: User ID
+        in: path
+        name: user_id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Get user roles
+      tags:
+      - RBAC
+  /api/v1/rbac/users/assign-role:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Role assignment request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/internal_handlers.AssignRoleRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Assign role to user
+      tags:
+      - RBAC
+  /api/v1/rbac/users/remove-role:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Role removal request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/internal_handlers.AssignRoleRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Remove role from user
+      tags:
+      - RBAC
+swagger: "2.0"

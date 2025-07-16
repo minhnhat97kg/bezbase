@@ -60,6 +60,67 @@ bezbase/
 └── docker-compose.yml     # Docker Compose configuration
 ```
 
+## 🛠️ Development with Make
+
+This project includes a Makefile to simplify development tasks. Here are the available commands:
+
+### Initial Setup
+
+```bash
+# Install all dependencies (backend and frontend)
+make install
+```
+
+### Development
+
+```bash
+# Start both backend and frontend development servers
+make dev
+
+# Start only backend with hot-reload
+make dev-backend
+
+# Start only frontend with hot-reload
+make dev-frontend
+```
+
+### Testing
+
+```bash
+# Run all tests
+make test
+
+# Run backend tests only
+make test-backend
+
+# Run frontend tests only
+make test-frontend
+```
+
+### Documentation
+
+```bash
+# Generate Swagger documentation
+make swagger
+```
+
+### Building
+
+```bash
+# Build both backend and frontend for production
+make build
+
+# Clean build artifacts
+make clean
+```
+
+### Help
+
+```bash
+# Show all available commands
+make help
+```
+
 ## 🚀 Quick Start with Docker
 
 ### 1. Clone the repository

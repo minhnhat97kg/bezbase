@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"bezbase/internal/auth"
+	"bezbase/internal/dto"
 	"bezbase/internal/models"
 
 	"gorm.io/gorm"
@@ -23,7 +24,7 @@ func NewAuthService(db *gorm.DB, jwtSecret string) *AuthService {
 }
 
 // RegisterWithEmail creates a new user with email/password authentication
-func (s *AuthService) RegisterWithEmail(req models.RegisterRequest) (*models.AuthResponse, error) {
+func (s *AuthService) RegisterWithEmail(req dto.RegisterRequest) (*dto.AuthResponse, error) {
 	tx := s.db.Begin()
 	defer func() {
 		if r := recover(); r != nil {
@@ -97,14 +98,14 @@ func (s *AuthService) RegisterWithEmail(req models.RegisterRequest) (*models.Aut
 		return nil, errors.New("failed to generate token")
 	}
 
-	return &models.AuthResponse{
+	return &dto.AuthResponse{
 		Token: token,
-		User:  models.ToUserResponse(&user),
+		User:  dto.ToUserResponse(&user),
 	}, nil
 }
 
 // LoginWithUsername authenticates user with username and password
-func (s *AuthService) LoginWithUsername(req models.LoginRequest) (*models.AuthResponse, error) {
+func (s *AuthService) LoginWithUsername(req dto.LoginRequest) (*dto.AuthResponse, error) {
 	// Find auth provider by username
 	var authProvider models.AuthProvider
 	if err := s.db.Where("user_name = ? AND provider = ?", req.Username, models.ProviderEmail).First(&authProvider).Error; err != nil {
@@ -133,14 +134,14 @@ func (s *AuthService) LoginWithUsername(req models.LoginRequest) (*models.AuthRe
 		return nil, errors.New("failed to generate token")
 	}
 
-	return &models.AuthResponse{
+	return &dto.AuthResponse{
 		Token: token,
-		User:  models.ToUserResponse(&user),
+		User:  dto.ToUserResponse(&user),
 	}, nil
 }
 
 // RegisterWithSocialProvider creates a user from social login (future implementation)
-func (s *AuthService) RegisterWithSocialProvider(provider models.AuthProviderType, providerID, email, firstName, lastName string) (*models.AuthResponse, error) {
+func (s *AuthService) RegisterWithSocialProvider(provider models.AuthProviderType, providerID, email, firstName, lastName string) (*dto.AuthResponse, error) {
 	tx := s.db.Begin()
 	defer func() {
 		if r := recover(); r != nil {
@@ -186,7 +187,7 @@ func (s *AuthService) RegisterWithSocialProvider(provider models.AuthProviderTyp
 		Provider:   provider,
 		ProviderID: providerID,
 		UserName:   email, // For social providers, use email as username
-		Verified:   true, // Social logins are typically pre-verified
+		Verified:   true,  // Social logins are typically pre-verified
 	}
 	if err := tx.Create(&authProvider).Error; err != nil {
 		tx.Rollback()
@@ -207,14 +208,14 @@ func (s *AuthService) RegisterWithSocialProvider(provider models.AuthProviderTyp
 		return nil, errors.New("failed to generate token")
 	}
 
-	return &models.AuthResponse{
+	return &dto.AuthResponse{
 		Token: token,
-		User:  models.ToUserResponse(&user),
+		User:  dto.ToUserResponse(&user),
 	}, nil
 }
 
 // loginWithSocialProvider handles login for existing social accounts
-func (s *AuthService) loginWithSocialProvider(provider models.AuthProviderType, providerID string) (*models.AuthResponse, error) {
+func (s *AuthService) loginWithSocialProvider(provider models.AuthProviderType, providerID string) (*dto.AuthResponse, error) {
 	// Find auth provider
 	var authProvider models.AuthProvider
 	if err := s.db.Where("provider_id = ? AND provider = ?", providerID, provider).First(&authProvider).Error; err != nil {
@@ -238,9 +239,9 @@ func (s *AuthService) loginWithSocialProvider(provider models.AuthProviderType, 
 		return nil, errors.New("failed to generate token")
 	}
 
-	return &models.AuthResponse{
+	return &dto.AuthResponse{
 		Token: token,
-		User:  models.ToUserResponse(&user),
+		User:  dto.ToUserResponse(&user),
 	}, nil
 }
 
