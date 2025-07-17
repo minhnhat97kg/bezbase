@@ -1,21 +1,47 @@
-import React from 'react';
+import React, { ReactNode } from 'react';
 import Icon from './Icons';
 
+interface Tab {
+  id: string;
+  name: string;
+  icon?: string;
+}
+
+interface TabLayoutProps {
+  title: string;
+  subtitle?: string;
+  children: ReactNode;
+  tabs?: Tab[];
+  activeTab: string;
+  onTabChange: (tab: string) => void;
+  showTabs?: boolean;
+  headerActions?: ReactNode;
+  message?: string;
+  error?: string;
+  onMessageDismiss?: () => void;
+  onErrorDismiss?: () => void;
+  className?: string;
+}
+
 /**
- * CommonLayout - A reusable layout component for standard pages without tabs
+ * TabLayout - A reusable layout component for pages with tabbed navigation
  * 
  * This component provides a consistent layout structure for pages that need:
  * - A header with title and subtitle
- * - Header actions (buttons, etc.)
+ * - Tabbed navigation interface
  * - Success/error message display
- * - A clean content area
+ * - Header actions (buttons, etc.)
  * 
- * Perfect for list pages, forms, dashboards, and other single-content pages.
+ * Perfect for admin panels, settings pages, management interfaces, etc.
  */
-const CommonLayout = ({
+const TabLayout: React.FC<TabLayoutProps> = ({
   title,
   subtitle,
   children,
+  tabs = [],
+  activeTab,
+  onTabChange,
+  showTabs = false,
   headerActions = null,
   message = '',
   error = '',
@@ -41,6 +67,30 @@ const CommonLayout = ({
               )}
             </div>
           </div>
+
+          {/* Tabs Navigation */}
+          {showTabs && tabs.length > 0 && (
+            <div className="flex border-b border-gray-200">
+              {tabs.map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => onTabChange && onTabChange(tab.id)}
+                  className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors flex items-center ${activeTab === tab.id
+                    ? 'border-primary-500 text-primary-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                    }`}
+                  role="tab"
+                  aria-selected={activeTab === tab.id}
+                  aria-controls={`tabpanel-${tab.id}`}
+                >
+                  {tab.icon && (
+                    <Icon name={tab.icon} className="mr-2" />
+                  )}
+                  {tab.name}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Content Area */}
@@ -88,8 +138,8 @@ const CommonLayout = ({
               </div>
             )}
 
-            {/* Main Content */}
-            <div>
+            {/* Tab Content */}
+            <div role="tabpanel" id={`tabpanel-${activeTab}`}>
               {children}
             </div>
           </div>
@@ -99,4 +149,4 @@ const CommonLayout = ({
   );
 };
 
-export default CommonLayout;
+export default TabLayout;

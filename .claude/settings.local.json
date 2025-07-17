@@ -20,7 +20,11 @@
       "Bash(npm install:*)",
       "Bash(swag init:*)",
       "Bash(rm:*)",
-      "Bash(go vet:*)"
+      "Bash(go vet:*)",
+      "Bash(find:*)",
+      "Bash(mv:*)",
+      "Bash(npx tsc:*)",
+      "Bash(npm run build:*)"
     ],
     "deny": []
   }

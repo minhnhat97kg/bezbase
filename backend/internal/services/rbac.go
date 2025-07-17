@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"strconv"
+	"strings"
 
 	"bezbase/internal/dto"
 	"bezbase/internal/models"
@@ -176,20 +177,20 @@ func (r *RBACService) addDefaultPermissionsForRole(roleName string) error {
 	switch roleName {
 	case "admin":
 		permissions = [][]string{
-			{"admin", "*", "*"},
+			{"admin", models.ResourceTypeAll.String(), models.ActionTypeAll.String()},
 		}
 	case "moderator":
 		permissions = [][]string{
-			{"moderator", "users", "read"},
-			{"moderator", "users", "update"},
-			{"moderator", "posts", "*"},
+			{"moderator", models.ResourceTypeUser.String(), models.ActionTypeRead.String()},
+			{"moderator", models.ResourceTypeUser.String(), models.ActionTypeUpdate.String()},
+			{"moderator", models.ResourceTypePost.String(), models.ActionTypeAll.String()},
 		}
 	case "user":
 		permissions = [][]string{
-			{"user", "profile", "read"},
-			{"user", "profile", "update"},
-			{"user", "posts", "create"},
-			{"user", "posts", "read"},
+			{"user", models.ResourceTypeProfile.String(), models.ActionTypeRead.String()},
+			{"user", models.ResourceTypeProfile.String(), models.ActionTypeUpdate.String()},
+			{"user", models.ResourceTypePost.String(), models.ActionTypeCreate.String()},
+			{"user", models.ResourceTypePost.String(), models.ActionTypeRead.String()},
 		}
 	}
 
@@ -497,7 +498,15 @@ func (r *RBACService) GetPermissionsForRole(role string) ([][]string, error) {
 	return r.enforcer.GetPermissionsForUser(role)
 }
 
-func (r *RBACService) GetAllPermissions(page, pageSize int, roleFilter, resourceFilter, actionFilter, sortField, sortOrder string) ([]dto.PermissionResponse, int, error) {
+func (r *RBACService) GetAllPermissions(page, pageSize int, roleFilter, resourceFilter, actionFilter, permissionFilter, sortField, sortOrder string) ([]dto.PermissionResponse, int, error) {
+	// Get hardcoded permissions to create a mapping
+	hardcodedPermissions := models.GetHardcodedPermissions()
+	permissionMap := make(map[string]models.Permission)
+	for _, perm := range hardcodedPermissions {
+		key := fmt.Sprintf("%s:%s", perm.Resource.String(), perm.Action.String())
+		permissionMap[key] = perm
+	}
+
 	// Query casbin_rule table directly for permissions (ptype = 'p')
 	query := r.db.Model(&models.Rule{}).Where("ptype = 'p'")
 
@@ -510,6 +519,30 @@ func (r *RBACService) GetAllPermissions(page, pageSize int, roleFilter, resource
 	}
 	if actionFilter != "" {
 		query = query.Where("v2 LIKE ?", "%"+actionFilter+"%")
+	}
+	if permissionFilter != "" {
+		// Filter by the permission field from hardcoded permissions
+		// First, find all hardcoded permissions that match the filter
+		var matchingResourceActions []string
+		for _, perm := range hardcodedPermissions {
+			if strings.Contains(strings.ToLower(perm.Permission), strings.ToLower(permissionFilter)) {
+				matchingResourceActions = append(matchingResourceActions, fmt.Sprintf("%s:%s", perm.Resource.String(), perm.Action.String()))
+			}
+		}
+		
+		if len(matchingResourceActions) > 0 {
+			// Create OR conditions for each matching resource:action
+			conditions := make([]string, len(matchingResourceActions))
+			args := make([]interface{}, len(matchingResourceActions))
+			for i, resourceAction := range matchingResourceActions {
+				conditions[i] = "CONCAT(v1, ':', v2) = ?"
+				args[i] = resourceAction
+			}
+			query = query.Where(fmt.Sprintf("(%s)", strings.Join(conditions, " OR ")), args...)
+		} else {
+			// If no hardcoded permissions match, also check resource:action format
+			query = query.Where("CONCAT(v1, ':', v2) LIKE ?", "%"+permissionFilter+"%")
+		}
 	}
 
 	// Count total records
@@ -528,6 +561,10 @@ func (r *RBACService) GetAllPermissions(page, pageSize int, roleFilter, resource
 			orderClause = fmt.Sprintf("v1 %s", sortOrder)
 		case "action":
 			orderClause = fmt.Sprintf("v2 %s", sortOrder)
+		case "permission":
+			// For permission sorting, we'll need to sort by resource:action format
+			// since we can't easily sort by the hardcoded permission values in SQL
+			orderClause = fmt.Sprintf("CONCAT(v1, ':', v2) %s", sortOrder)
 		default:
 			orderClause = fmt.Sprintf("id %s", sortOrder)
 		}
@@ -540,14 +577,23 @@ func (r *RBACService) GetAllPermissions(page, pageSize int, roleFilter, resource
 		return nil, 0, fmt.Errorf("failed to get permissions: %w", err)
 	}
 
-	// Convert to PermissionResponse format
+	// Convert to PermissionResponse format using hardcoded permissions
 	permissions := make([]dto.PermissionResponse, len(rules))
 	for i, rule := range rules {
+		key := fmt.Sprintf("%s:%s", rule.V1, rule.V2)
+		permission := key // default to resource:action format
+		
+		// Use the hardcoded permission if available
+		if hardcodedPerm, exists := permissionMap[key]; exists {
+			permission = hardcodedPerm.Permission
+		}
+
 		permissions[i] = dto.PermissionResponse{
-			ID:       rule.ID,
-			Role:     rule.V0,
-			Resource: rule.V1,
-			Action:   rule.V2,
+			ID:         rule.ID,
+			Role:       rule.V0,
+			Resource:   rule.V1,
+			Action:     rule.V2,
+			Permission: permission,
 		}
 	}
 

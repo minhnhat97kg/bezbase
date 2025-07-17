@@ -1,10 +1,16 @@
 import { useState, useEffect } from 'react';
 import { rbacService } from '../services/api';
 
-export default function useResourceActionOptions() {
-  const [resources, setResources] = useState([]);
-  const [actions, setActions] = useState([]);
-  const [loading, setLoading] = useState(true);
+interface ResourceActionOptions {
+  resources: any[];
+  actions: any[];
+  loading: boolean;
+}
+
+export default function useResourceActionOptions(): ResourceActionOptions {
+  const [resources, setResources] = useState<any[]>([]);
+  const [actions, setActions] = useState<any[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
 
   useEffect(() => {
     async function fetchOptions() {

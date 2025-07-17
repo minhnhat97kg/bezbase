@@ -39,12 +39,6 @@ type RoleWithPermissions struct {
 	Permissions []PermissionResponse `json:"permissions"`
 }
 
-type PermissionResponse struct {
-	ID       int    `json:"id"`
-	Role     string `json:"role"`
-	Resource string `json:"resource"`
-	Action   string `json:"action"`
-}
 
 type RolesListResponse = PaginatedResponse[RoleResponse]
 

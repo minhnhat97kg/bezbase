@@ -1,11 +1,29 @@
-import React, { createContext, useContext, useState, useEffect } from "react";
+import React, { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import { authService, userService } from "../services/api";
 
-const AuthContext = createContext();
+interface User {
+  id: string;
+  username: string;
+  email: string;
+  [key: string]: any;
+}
+
+interface AuthContextType {
+  user: User | null;
+  permissions: string[];
+  login: (username: string, password: string) => Promise<{ success: boolean; error?: string }>;
+  register: (userData: any) => Promise<{ success: boolean; error?: string }>;
+  logout: () => void;
+  updateUser: (updatedUser: User) => void;
+  userProfile: () => Promise<{ success: boolean; user?: User; error?: string }>;
+  loading: boolean;
+}
+
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export { AuthContext };
 
-export const useAuth = () => {
+export const useAuth = (): AuthContextType => {
   const context = useContext(AuthContext);
   if (!context) {
     throw new Error("useAuth must be used within an AuthProvider");
@@ -13,10 +31,14 @@ export const useAuth = () => {
   return context;
 };
 
-export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null);
-  const [permissions, setPermissions] = useState([]);
-  const [loading, setLoading] = useState(true);
+interface AuthProviderProps {
+  children: ReactNode;
+}
+
+export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
+  const [user, setUser] = useState<User | null>(null);
+  const [permissions, setPermissions] = useState<string[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -48,7 +70,7 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const login = async (username, password) => {
+  const login = async (username: string, password: string): Promise<{ success: boolean; error?: string }> => {
     try {
       const response = await authService.login(username, password);
       const { token, user } = response.data;
@@ -59,7 +81,7 @@ export const AuthProvider = ({ children }) => {
       fetchPermissions();
 
       return { success: true };
-    } catch (error) {
+    } catch (error: any) {
       return {
         success: false,
         error: error.response?.data?.message || "Login failed",
@@ -67,7 +89,7 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const register = async (userData) => {
+  const register = async (userData: any): Promise<{ success: boolean; error?: string }> => {
     try {
       const response = await authService.register(userData);
       const { token, user } = response.data;
@@ -77,7 +99,7 @@ export const AuthProvider = ({ children }) => {
       setUser(user);
 
       return { success: true };
-    } catch (error) {
+    } catch (error: any) {
       return {
         success: false,
         error: error.response?.data?.message || "Registration failed",
@@ -85,24 +107,24 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const logout = () => {
+  const logout = (): void => {
     authService.logout();
     setUser(null);
   };
 
-  const updateUser = (updatedUser) => {
+  const updateUser = (updatedUser: User): void => {
     setUser(updatedUser);
     localStorage.setItem("user", JSON.stringify(updatedUser));
   };
 
-  const userProfile = async () => {
+  const userProfile = async (): Promise<{ success: boolean; user?: User; error?: string }> => {
     try {
       const response = await userService.getProfile();
       const userData = response.data;
       setUser(userData);
       localStorage.setItem("user", JSON.stringify(userData));
       return { success: true, user: userData };
-    } catch (error) {
+    } catch (error: any) {
       return {
         success: false,
         error: error.response?.data?.message || "Failed to fetch user profile",

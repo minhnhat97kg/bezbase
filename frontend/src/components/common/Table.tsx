@@ -2,7 +2,42 @@ import React from 'react';
 import { useTranslation } from 'react-i18next';
 import Icon from './Icons';
 
-const Table = ({
+interface TableColumn {
+  key: string;
+  header: string;
+  sortable?: boolean;
+  nowrap?: boolean;
+  align?: string;
+  className?: string;
+  render?: (value: any, row: any) => React.ReactNode;
+}
+
+interface TablePagination {
+  currentPage?: number;
+  totalPages?: number;
+  pageSize?: number;
+  total?: number;
+  pageSizeOptions?: number[];
+}
+
+interface TableProps {
+  columns: TableColumn[];
+  data: any[];
+  loading?: boolean;
+  emptyMessage?: string;
+  emptyDescription?: string;
+  onSort?: (field: string) => void;
+  sortField?: string;
+  sortOrder?: 'asc' | 'desc';
+  pagination?: TablePagination;
+  onPageChange?: (page: number) => void;
+  onPageSizeChange?: (pageSize: number) => void;
+  className?: string;
+  rowClassName?: string;
+  onRowClick?: (row: any) => void;
+}
+
+const Table: React.FC<TableProps> = ({
   columns,
   data,
   loading = false,
@@ -22,7 +57,7 @@ const Table = ({
   
   const defaultEmptyMessage = emptyMessage || t('table.noData');
   // Sort icon component
-  const getSortIcon = (field) => {
+  const getSortIcon = (field: string) => {
     if (sortField !== field) {
       return (
         <Icon name="sortAsc" className="text-gray-400" />
@@ -235,7 +270,7 @@ const Table = ({
                 key={row.id || rowIndex}
                 className={`hover:bg-gray-50 dark:hover:bg-gray-700 ${rowClassName} ${onRowClick ? 'cursor-pointer' : ''
                   }`}
-                onClick={onRowClick ? () => onRowClick(row, rowIndex) : undefined}
+                onClick={onRowClick ? () => onRowClick(row) : undefined}
               >
                 {columns.map((column, colIndex) => (
                   <td
@@ -243,7 +278,7 @@ const Table = ({
                     className={`px-6 py-4 ${column.nowrap ? 'whitespace-nowrap' : ''} ${column.align === 'right' ? 'text-right' : ''
                       } ${column.className || ''}`}
                   >
-                    {column.render ? column.render(row[column.key], row, rowIndex) : row[column.key]}
+                    {column.render ? column.render(row[column.key], row) : row[column.key]}
                   </td>
                 ))}
               </tr>

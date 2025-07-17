@@ -12,4 +12,12 @@ type PermissionRequest struct {
 	Action   string `json:"action" validate:"required"`
 }
 
+type PermissionResponse struct {
+	ID         int    `json:"id"`
+	Role       string `json:"role"`
+	Resource   string `json:"resource"`
+	Action     string `json:"action"`
+	Permission string `json:"permission"`
+}
+
 type PermissionsListResponse = PaginatedResponse[PermissionResponse]

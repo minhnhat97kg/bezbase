@@ -5,8 +5,6 @@ import RolesList from '../components/rbac/RolesList';
 import RoleForm from '../components/rbac/RoleForm';
 import PermissionManager from '../components/rbac/PermissionManager';
 import UserRoleAssignment from '../components/rbac/UserRoleAssignment';
-import ResourcesList from '../components/rbac/ResourcesList';
-import ActionsList from '../components/rbac/ActionsList';
 import Icon from '../components/common/Icons';
 import TabLayout from '../components/common/TabLayout';
 
@@ -47,14 +45,20 @@ const RoleManagement = () => {
         ...filters
       };
 
-      // Remove empty filters
+      // Remove empty filters and convert is_system to boolean
       Object.keys(params).forEach(key => {
         if (params[key] === '' || params[key] === null || params[key] === undefined) {
           delete params[key];
         }
       });
 
-      const response = await rbacService.getRoles(params);
+      // Convert is_system to boolean if it exists
+      const apiParams: any = { ...params };
+      if (apiParams.is_system !== undefined && apiParams.is_system !== '') {
+        apiParams.is_system = apiParams.is_system === 'true';
+      }
+
+      const response = await rbacService.getRoles(apiParams);
 
       setRoles(response.data.data);
       setPagination({
@@ -131,8 +135,6 @@ const RoleManagement = () => {
     { id: 'roles', name: t('roles.tabs.roles'), icon: 'shield' },
     { id: 'permissions', name: t('roles.tabs.permissions'), icon: 'key' },
     { id: 'assignments', name: t('roles.tabs.userAssignments'), icon: 'users' },
-    { id: 'resources', name: t('roles.tabs.resources'), icon: 'settings' },
-    { id: 'actions', name: t('roles.tabs.actions'), icon: 'star' },
   ];
 
   if (loading) {
@@ -232,19 +234,6 @@ const RoleManagement = () => {
           </div>
         )}
 
-        {activeTab === 'resources' && (
-          <div>
-            <h2 className="text-lg font-medium text-gray-900 mb-6">{t('roles.tabs.resources')}</h2>
-            <ResourcesList />
-          </div>
-        )}
-
-        {activeTab === 'actions' && (
-          <div>
-            <h2 className="text-lg font-medium text-gray-900 mb-6">{t('roles.tabs.actions')}</h2>
-            <ActionsList />
-          </div>
-        )}
     </TabLayout>
 
     {/* Role Form Modal */}

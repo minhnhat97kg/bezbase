@@ -24,7 +24,8 @@
     "success": "Thành công",
     "error": "Lỗi",
     "warning": "Cảnh báo",
-    "info": "Thông tin"
+    "info": "Thông tin",
+    "active": "Hoạt động"
   },
   "navigation": {
     "dashboard": "Bảng điều khiển",
@@ -403,9 +404,7 @@
     "tabs": {
       "roles": "Vai trò",
       "permissions": "Quyền hạn",
-      "userAssignments": "Gán người dùng",
-      "resources": "Tài nguyên",
-      "actions": "Hành động"
+      "userAssignments": "Gán người dùng"
     },
     "filters": {
       "status": {

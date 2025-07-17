@@ -13,6 +13,13 @@ const (
 	ResourceTypeProfile    ResourceType = "profile"
 	ResourceTypeAdmin      ResourceType = "admin"
 	ResourceTypePermission ResourceType = "permissions"
+	ResourceTypeRole       ResourceType = "roles"
+	ResourceTypeDashboard  ResourceType = "dashboard"
+	ResourceTypeSettings   ResourceType = "settings"
+	ResourceTypeReports    ResourceType = "reports"
+	ResourceTypeAudit      ResourceType = "audit"
+	ResourceTypeSystem     ResourceType = "system"
+	ResourceTypeBackup     ResourceType = "backup"
 	ResourceTypeAll        ResourceType = "*"
 )
 
@@ -24,11 +31,13 @@ func (a ActionType) String() string {
 
 // Define action types for RBAC
 const (
-	ActionTypeCreate ActionType = "create"
-	ActionTypeRead   ActionType = "read"
-	ActionTypeUpdate ActionType = "update"
-	ActionTypeDelete ActionType = "delete"
-	ActionTypeAll    ActionType = "*"
+	ActionTypeCreate  ActionType = "create"
+	ActionTypeRead    ActionType = "read"
+	ActionTypeUpdate  ActionType = "update"
+	ActionTypeDelete  ActionType = "delete"
+	ActionTypeExport  ActionType = "export"
+	ActionTypeRestore ActionType = "restore"
+	ActionTypeAll     ActionType = "*"
 )
 
 // Apply pagination and get results

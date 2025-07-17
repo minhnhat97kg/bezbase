@@ -24,7 +24,8 @@
     "success": "Success",
     "error": "Error",
     "warning": "Warning",
-    "info": "Information"
+    "info": "Information",
+    "active": "Active"
   },
   "navigation": {
     "dashboard": "Dashboard",
@@ -403,9 +404,7 @@
     "tabs": {
       "roles": "Roles",
       "permissions": "Permissions",
-      "userAssignments": "User Assignments",
-      "resources": "Resources",
-      "actions": "Actions"
+      "userAssignments": "User Assignments"
     },
     "filters": {
       "status": {

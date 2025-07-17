@@ -11,7 +11,7 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
-func RBACMiddleware(rbacService *services.RBACService, resource models.ResourceType, action models.ActionType) echo.MiddlewareFunc {
+func RBACMiddleware(rbacService *services.RBACService, permission models.Permission) echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
 			// Get user claims from JWT middleware
@@ -21,13 +21,13 @@ func RBACMiddleware(rbacService *services.RBACService, resource models.ResourceT
 			}
 
 			// Check permission
-			allowed, err := rbacService.CheckPermission(userClaims.UserID, resource.String(), action.String())
+			allowed, err := rbacService.CheckPermission(userClaims.UserID, permission.Resource.String(), permission.Action.String())
 			if err != nil {
 				return echo.NewHTTPError(http.StatusInternalServerError, fmt.Sprintf("Permission check failed: %v", err))
 			}
 
 			if !allowed {
-				return echo.NewHTTPError(http.StatusForbidden, "Insufficient permissions")
+				return echo.NewHTTPError(http.StatusForbidden, fmt.Sprintf("Insufficient permissions: %s", permission.Permission))
 			}
 
 			return next(c)
@@ -35,8 +35,13 @@ func RBACMiddleware(rbacService *services.RBACService, resource models.ResourceT
 	}
 }
 
-func RequirePermission(rbacService *services.RBACService, resource models.ResourceType, action models.ActionType) echo.MiddlewareFunc {
-	return RBACMiddleware(rbacService, resource, action)
+func RequirePermission(rbacService *services.RBACService, permission models.Permission) echo.MiddlewareFunc {
+	return RBACMiddleware(rbacService, permission)
+}
+
+// RequirePermissionModel accepts a Permission model directly
+func RequirePermissionModel(rbacService *services.RBACService, permission models.Permission) echo.MiddlewareFunc {
+	return RBACMiddleware(rbacService, permission)
 }
 
 func RequireRole(rbacService *services.RBACService, role string) echo.MiddlewareFunc {
