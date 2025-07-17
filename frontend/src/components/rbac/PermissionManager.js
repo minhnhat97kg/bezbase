@@ -274,7 +274,7 @@ const PermissionManager = ({ roles, onRefresh }) => {
                 >
                   <option value="">Select resource...</option>
                   {resourceOptions.map(resource => (
-                    <option key={resource.name} value={resource.name}>{resource.name}</option>
+                    <option key={resource.id} value={resource.id}>{`${resource.name} (${resource.id})`}</option>
                   ))}
                 </select>
                 </div>
@@ -290,7 +290,7 @@ const PermissionManager = ({ roles, onRefresh }) => {
                 >
                   <option value="">Select action...</option>
                   {actionOptions.map(action => (
-                    <option key={action.name} value={action.name}>{action.name}</option>
+                    <option key={action.id} value={action.id}>{`${action.name} (${action.id})`}</option>
                   ))}
                 </select>
                 </div>

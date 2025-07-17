@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"bezbase/internal/models"
+	"bezbase/internal/pkg/contextx"
 
 	"gorm.io/gorm"
 )
@@ -17,9 +18,9 @@ func NewRoleRepository(db *gorm.DB) RoleRepository {
 	return &roleRepository{db: db}
 }
 
-func (r *roleRepository) GetByID(id uint) (*models.Role, error) {
+func (r *roleRepository) GetByID(ctx contextx.Contextx, id uint) (*models.Role, error) {
 	var role models.Role
-	if err := r.db.First(&role, id).Error; err != nil {
+	if err := ctx.GetTxn(r.db).First(&role, id).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, errors.New("role not found")
 		}
@@ -28,9 +29,9 @@ func (r *roleRepository) GetByID(id uint) (*models.Role, error) {
 	return &role, nil
 }
 
-func (r *roleRepository) GetByName(name string) (*models.Role, error) {
+func (r *roleRepository) GetByName(ctx contextx.Contextx, name string) (*models.Role, error) {
 	var role models.Role
-	if err := r.db.Where("name = ?", name).First(&role).Error; err != nil {
+	if err := ctx.GetTxn(r.db).Where("name = ?", name).First(&role).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, errors.New("role not found")
 		}
@@ -39,27 +40,27 @@ func (r *roleRepository) GetByName(name string) (*models.Role, error) {
 	return &role, nil
 }
 
-func (r *roleRepository) GetAll() ([]models.Role, error) {
+func (r *roleRepository) GetAll(ctx contextx.Contextx) ([]models.Role, error) {
 	var roles []models.Role
-	if err := r.db.Find(&roles).Error; err != nil {
+	if err := ctx.GetTxn(r.db).Find(&roles).Error; err != nil {
 		return nil, errors.New("failed to get roles")
 	}
 	return roles, nil
 }
 
-func (r *roleRepository) GetActive() ([]models.Role, error) {
+func (r *roleRepository) GetActive(ctx contextx.Contextx) ([]models.Role, error) {
 	var roles []models.Role
-	if err := r.db.Where("is_active = ?", true).Find(&roles).Error; err != nil {
+	if err := ctx.GetTxn(r.db).Where("is_active = ?", true).Find(&roles).Error; err != nil {
 		return nil, errors.New("failed to get active roles")
 	}
 	return roles, nil
 }
 
-func (r *roleRepository) GetWithPagination(page, pageSize int, searchFilter, statusFilter string, isSystemFilter *bool, sortField, sortOrder string) ([]models.Role, int, error) {
+func (r *roleRepository) GetWithPagination(ctx contextx.Contextx, page, pageSize int, searchFilter, statusFilter string, isSystemFilter *bool, sortField, sortOrder string) ([]models.Role, int, error) {
 	var roles []models.Role
 	var total int64
 
-	query := r.db.Model(&models.Role{})
+	query := ctx.GetTxn(r.db).Model(&models.Role{})
 
 	// Apply search filter
 	if searchFilter != "" {
@@ -113,22 +114,22 @@ func (r *roleRepository) GetWithPagination(page, pageSize int, searchFilter, sta
 	return roles, int(total), nil
 }
 
-func (r *roleRepository) Create(role *models.Role) error {
-	if err := r.db.Create(role).Error; err != nil {
+func (r *roleRepository) Create(ctx contextx.Contextx, role *models.Role) error {
+	if err := ctx.GetTxn(r.db).Create(role).Error; err != nil {
 		return errors.New("failed to create role")
 	}
 	return nil
 }
 
-func (r *roleRepository) Update(role *models.Role) error {
-	if err := r.db.Save(role).Error; err != nil {
+func (r *roleRepository) Update(ctx contextx.Contextx, role *models.Role) error {
+	if err := ctx.GetTxn(r.db).Save(role).Error; err != nil {
 		return errors.New("failed to update role")
 	}
 	return nil
 }
 
-func (r *roleRepository) Delete(role *models.Role) error {
-	if err := r.db.Delete(role).Error; err != nil {
+func (r *roleRepository) Delete(ctx contextx.Contextx, role *models.Role) error {
+	if err := ctx.GetTxn(r.db).Delete(role).Error; err != nil {
 		return errors.New("failed to delete role")
 	}
 	return nil

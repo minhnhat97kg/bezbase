@@ -6,6 +6,7 @@ import (
 
 	"bezbase/internal/dto"
 	"bezbase/internal/pkg/auth"
+	"bezbase/internal/pkg/contextx"
 	"bezbase/internal/services"
 
 	"github.com/labstack/echo/v4"
@@ -40,7 +41,7 @@ func (h *UserHandler) GetCurrentUserPermissions(c echo.Context) error {
 	if h.rbacService == nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, "RBAC service not available")
 	}
-	permissions, err := h.rbacService.GetPermissionsForUser(claims.UserID)
+	permissions, err := h.rbacService.GetPermissionsForUser(contextx.NewWithRequestContext(c), claims.UserID)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
 	}
@@ -60,12 +61,11 @@ func (h *UserHandler) GetCurrentUserPermissions(c echo.Context) error {
 // @Router /v1/profile [get]
 func (h *UserHandler) GetProfile(c echo.Context) error {
 	claims := c.Get("user").(*auth.Claims)
-
-	user, err := h.userService.GetProfile(claims.UserID)
+	ctx := contextx.NewWithRequestContext(c)
+	user, err := h.userService.GetProfile(ctx, claims.UserID)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusNotFound, err.Error())
 	}
-
 	return c.JSON(http.StatusOK, user)
 }
 
@@ -82,17 +82,15 @@ func (h *UserHandler) GetProfile(c echo.Context) error {
 // @Router /v1/profile [put]
 func (h *UserHandler) UpdateProfile(c echo.Context) error {
 	claims := c.Get("user").(*auth.Claims)
-
+	ctx := contextx.NewWithRequestContext(c)
 	var req dto.UpdateProfileRequest
 	if err := c.Bind(&req); err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, "Invalid request body")
 	}
-
-	user, err := h.userService.UpdateProfile(claims.UserID, req)
+	user, err := h.userService.UpdateProfile(ctx, claims.UserID, req)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
 	}
-
 	return c.JSON(http.StatusOK, user)
 }
 
@@ -120,7 +118,7 @@ func (h *UserHandler) ChangePassword(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, "New password and confirm password do not match")
 	}
 
-	err := h.userService.ChangePassword(claims.UserID, req.CurrentPassword, req.NewPassword)
+	err := h.userService.ChangePassword(contextx.NewWithRequestContext(c), claims.UserID, req.CurrentPassword, req.NewPassword)
 	if err != nil {
 		if err.Error() == "invalid current password" {
 			return echo.NewHTTPError(http.StatusBadRequest, "Current password is incorrect")
@@ -149,11 +147,11 @@ func (h *UserHandler) GetUsers(c echo.Context) error {
 
 	var users []dto.UserResponse
 	var err error
-
+	ctx := contextx.NewWithRequestContext(c)
 	if search != "" {
-		users, err = h.userService.SearchUsers(search)
+		users, err = h.userService.SearchUsers(ctx, search)
 	} else {
-		users, err = h.userService.GetAllUsers()
+		users, err = h.userService.GetAllUsers(ctx)
 	}
 
 	if err != nil {
@@ -214,7 +212,7 @@ func (h *UserHandler) CreateUser(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, "Missing required fields")
 	}
 
-	user, err := h.userService.CreateUser(req)
+	user, err := h.userService.CreateUser(contextx.NewWithRequestContext(c), req)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
 	}
@@ -249,7 +247,7 @@ func (h *UserHandler) UpdateUser(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, "Invalid request body")
 	}
 
-	user, err := h.userService.UpdateUser(id, req)
+	user, err := h.userService.UpdateUser(contextx.NewWithRequestContext(c), id, req)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
 	}
@@ -285,7 +283,7 @@ func (h *UserHandler) DeleteUser(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusForbidden, "Cannot delete your own account")
 	}
 
-	err := h.userService.DeleteUser(id)
+	err := h.userService.DeleteUser(contextx.NewWithRequestContext(c), id)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
 	}

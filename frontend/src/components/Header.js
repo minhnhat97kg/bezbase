@@ -2,10 +2,13 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import usePageTitle from '../hooks/usePageTitle';
 import { useTheme } from '../context/ThemeContext';
+import { useTranslation } from 'react-i18next';
 import Icon from './common/Icons';
+import LanguageSelector from './LanguageSelector';
 
 const Header = ({ sidebarOpen, setSidebarOpen }) => {
   const { user, logout } = useAuth();
+  const { t } = useTranslation();
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const pageTitle = usePageTitle();
   const dropdownRef = useRef(null);
@@ -63,7 +66,7 @@ const Header = ({ sidebarOpen, setSidebarOpen }) => {
               <input
                 type="text"
                 className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-primary-500 focus:border-primary-500 sm:text-sm dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white"
-                placeholder="Search..."
+                placeholder={t('common.search')}
               />
             </div>
           </div>
@@ -85,6 +88,9 @@ const Header = ({ sidebarOpen, setSidebarOpen }) => {
             <Icon name="alarm" />
             <span className="absolute top-1 right-1 block h-2 w-2 rounded-full bg-red-400"></span>
           </button>
+
+          {/* Language Selector */}
+          <LanguageSelector />
 
           {/* Help */}
           <button className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-md transition-colors">
@@ -118,7 +124,7 @@ const Header = ({ sidebarOpen, setSidebarOpen }) => {
 
                   <button className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-gray-700 transition-colors flex items-center">
                     <Icon name="user" className="mr-3 text-gray-400" />
-                    Profile
+                    {t('navigation.profile')}
                   </button>
 
                   <button className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-gray-700 transition-colors flex items-center">
@@ -132,7 +138,7 @@ const Header = ({ sidebarOpen, setSidebarOpen }) => {
                       className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors flex items-center"
                     >
                       <Icon name="exit" className="mr-3 text-red-500" />
-                      Sign out
+                      {t('navigation.logout')}
                     </button>
                   </div>
                 </div>

@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"bezbase/internal/models"
+	"bezbase/internal/pkg/contextx"
 
 	"gorm.io/gorm"
 )
@@ -16,9 +17,9 @@ func NewRuleRepository(db *gorm.DB) RuleRepository {
 	return &ruleRepository{db: db}
 }
 
-func (r *ruleRepository) GetPermissions(page, pageSize int, roleFilter, resourceFilter, actionFilter, sortField, sortOrder string) ([]models.Rule, int, error) {
+func (r *ruleRepository) GetPermissions(ctx contextx.Contextx, page, pageSize int, roleFilter, resourceFilter, actionFilter, sortField, sortOrder string) ([]models.Rule, int, error) {
 	// Query casbin_rule table directly for permissions (ptype = 'p')
-	query := r.db.Model(&models.Rule{}).Where("ptype = 'p'")
+	query := ctx.GetTxn(r.db).Model(&models.Rule{}).Where("ptype = 'p'")
 
 	// Apply filters
 	if roleFilter != "" {

@@ -7,6 +7,7 @@ import (
 
 	"bezbase/internal/dto"
 	"bezbase/internal/models"
+	"bezbase/internal/pkg/contextx"
 	"bezbase/internal/repository"
 
 	"github.com/casbin/casbin/v2"
@@ -16,14 +17,31 @@ import (
 )
 
 type RBACService struct {
-	enforcer   *casbin.Enforcer
-	roleRepo   repository.RoleRepository
-	ruleRepo   repository.RuleRepository
-	db         *gorm.DB
+	enforcer *casbin.Enforcer
+	roleRepo repository.RoleRepository
+	ruleRepo repository.RuleRepository
+	db       *gorm.DB
+}
+
+// AssignDefaultRoleToUser assigns the default 'user' role to a user if they have no roles
+func (r *RBACService) AssignDefaultRoleToUser(ctx contextx.Contextx, userID uint) error {
+	subject := fmt.Sprintf("user:%d", userID)
+	roles, err := r.enforcer.GetRolesForUser(subject)
+	if err != nil {
+		return err
+	}
+	if len(roles) == 0 {
+		_, err := r.enforcer.AddRoleForUser(subject, "user")
+		if err != nil {
+			return err
+		}
+		return r.enforcer.SavePolicy()
+	}
+	return nil
 }
 
 // GetPermissionsForUser returns all permissions for a user (resource, action)
-func (r *RBACService) GetPermissionsForUser(userID uint) ([]string, error) {
+func (r *RBACService) GetPermissionsForUser(ctx contextx.Contextx, userID uint) ([]string, error) {
 	subject := fmt.Sprintf("user:%d", userID)
 	var result []string
 
@@ -42,6 +60,10 @@ func (r *RBACService) GetPermissionsForUser(userID uint) ([]string, error) {
 	roles, err := r.enforcer.GetRolesForUser(subject)
 	if err != nil {
 		return nil, err
+	}
+	// If user has no roles, treat as if they have 'user' role
+	if len(roles) == 0 {
+		roles = append(roles, "user")
 	}
 	for _, role := range roles {
 		rolePerms, err := r.enforcer.GetPermissionsForUser(role)
@@ -121,7 +143,7 @@ m = g(r.sub, p.sub) && (r.obj == p.obj || p.obj == "*") && (r.act == p.act || p.
 func (r *RBACService) initializeDefaultRoles() error {
 	// Default roles are now created via migration
 	// Just ensure the permissions are set up for existing roles
-	roles, err := r.roleRepo.GetAll()
+	roles, err := r.roleRepo.GetAll(contextx.Background())
 	if err != nil {
 		return err
 	}
@@ -188,7 +210,40 @@ func (r *RBACService) addDefaultPermissionsForRole(roleName string) error {
 
 func (r *RBACService) CheckPermission(userID uint, resource, action string) (bool, error) {
 	user := fmt.Sprintf("user:%d", userID)
-	return r.enforcer.Enforce(user, resource, action)
+	// Check roles for user
+	roles, err := r.enforcer.GetRolesForUser(user)
+	if err != nil {
+		return false, err
+	}
+	// If user has no roles, check as if they have 'user' role
+	if len(roles) == 0 {
+		ok, err := r.enforcer.Enforce("user", resource, action)
+		if err != nil {
+			return false, err
+		}
+		if ok {
+			return true, nil
+		}
+	}
+	// Check as the user
+	ok, err := r.enforcer.Enforce(user, resource, action)
+	if err != nil {
+		return false, err
+	}
+	if ok {
+		return true, nil
+	}
+	// Check as each role
+	for _, role := range roles {
+		ok, err := r.enforcer.Enforce(role, resource, action)
+		if err != nil {
+			continue
+		}
+		if ok {
+			return true, nil
+		}
+	}
+	return false, nil
 }
 
 func (r *RBACService) AddRole(role string) error {
@@ -197,9 +252,9 @@ func (r *RBACService) AddRole(role string) error {
 	return nil
 }
 
-func (r *RBACService) CreateRole(req dto.CreateRoleRequest) (*models.Role, error) {
+func (r *RBACService) CreateRole(ctx contextx.Contextx, req dto.CreateRoleRequest) (*models.Role, error) {
 	// Check if role already exists
-	if _, err := r.roleRepo.GetByName(req.Name); err == nil {
+	if _, err := r.roleRepo.GetByName(ctx, req.Name); err == nil {
 		return nil, fmt.Errorf("role with name '%s' already exists", req.Name)
 	}
 
@@ -219,15 +274,15 @@ func (r *RBACService) CreateRole(req dto.CreateRoleRequest) (*models.Role, error
 		return nil, fmt.Errorf("validation failed: %w", err)
 	}
 
-	if err := r.roleRepo.Create(&role); err != nil {
+	if err := r.roleRepo.Create(ctx, &role); err != nil {
 		return nil, fmt.Errorf("failed to create role: %w", err)
 	}
 
 	return &role, nil
 }
 
-func (r *RBACService) UpdateRole(id uint, req dto.UpdateRoleRequest) (*models.Role, error) {
-	role, err := r.roleRepo.GetByID(id)
+func (r *RBACService) UpdateRole(ctx contextx.Contextx, id uint, req dto.UpdateRoleRequest) (*models.Role, error) {
+	role, err := r.roleRepo.GetByID(ctx, id)
 	if err != nil {
 		return nil, fmt.Errorf("role not found: %w", err)
 	}
@@ -250,7 +305,7 @@ func (r *RBACService) UpdateRole(id uint, req dto.UpdateRoleRequest) (*models.Ro
 		return nil, fmt.Errorf("validation failed: %w", err)
 	}
 
-	if err := r.roleRepo.Update(role); err != nil {
+	if err := r.roleRepo.Update(ctx, role); err != nil {
 		return nil, fmt.Errorf("failed to update role: %w", err)
 	}
 
@@ -403,7 +458,14 @@ func (r *RBACService) RemoveRoleFromUser(userID uint, role string) error {
 
 func (r *RBACService) GetUserRoles(userID uint) ([]string, error) {
 	user := fmt.Sprintf("user:%d", userID)
-	return r.enforcer.GetRolesForUser(user)
+	roles, err := r.enforcer.GetRolesForUser(user)
+	if err != nil {
+		return nil, err
+	}
+	if len(roles) == 0 {
+		return []string{"user"}, nil
+	}
+	return roles, nil
 }
 
 func (r *RBACService) GetUsersWithRole(role string) ([]uint, error) {

@@ -5,6 +5,7 @@ import (
 
 	"bezbase/internal/dto"
 	"bezbase/internal/models"
+	"bezbase/internal/pkg/contextx"
 	"bezbase/internal/repository"
 
 	"golang.org/x/crypto/bcrypt"
@@ -36,8 +37,8 @@ func NewUserService(
 }
 
 // GetProfile retrieves user profile with all user information
-func (s *UserService) GetProfile(userID uint) (*dto.UserResponse, error) {
-	user, err := s.userRepo.GetByIDWithPreload(userID, "UserInfo")
+func (s *UserService) GetProfile(ctx contextx.Contextx, userID uint) (*dto.UserResponse, error) {
+	user, err := s.userRepo.GetByIDWithPreload(ctx, userID, "UserInfo")
 	if err != nil {
 		return nil, err
 	}
@@ -55,22 +56,22 @@ func (s *UserService) GetProfile(userID uint) (*dto.UserResponse, error) {
 }
 
 // UpdateProfile updates user information in UserInfo table
-func (s *UserService) UpdateProfile(userID uint, req dto.UpdateProfileRequest) (*dto.UserResponse, error) {
+func (s *UserService) UpdateProfile(ctx contextx.Contextx, userID uint, req dto.UpdateProfileRequest) (*dto.UserResponse, error) {
 	// Check if user exists
-	_, err := s.userRepo.GetByID(userID)
+	_, err := s.userRepo.GetByID(ctx, userID)
 	if err != nil {
 		return nil, err
 	}
 
 	// Get UserInfo
-	userInfo, err := s.userInfoRepo.GetByUserID(userID)
+	userInfo, err := s.userInfoRepo.GetByUserID(ctx, userID)
 	if err != nil {
 		return nil, err
 	}
 
 	// Check if username is being changed and if it's already taken
 	if req.Username != "" && req.Username != userInfo.Username {
-		taken, err := s.userInfoRepo.IsUsernameTaken(req.Username, userID)
+		taken, err := s.userInfoRepo.IsUsernameTaken(ctx, req.Username, userID)
 		if err != nil {
 			return nil, errors.New("failed to check username availability")
 		}
@@ -81,7 +82,7 @@ func (s *UserService) UpdateProfile(userID uint, req dto.UpdateProfileRequest) (
 
 	// Check if email is being changed and if it's already taken
 	if req.Email != "" && req.Email != userInfo.Email {
-		taken, err := s.userInfoRepo.IsEmailTaken(req.Email, userID)
+		taken, err := s.userInfoRepo.IsEmailTaken(ctx, req.Email, userID)
 		if err != nil {
 			return nil, errors.New("failed to check email availability")
 		}
@@ -125,22 +126,22 @@ func (s *UserService) UpdateProfile(userID uint, req dto.UpdateProfileRequest) (
 		userInfo.Phone = req.Phone
 	}
 
-	if err := s.userInfoRepo.Update(userInfo); err != nil {
+	if err := s.userInfoRepo.Update(ctx, userInfo); err != nil {
 		return nil, err
 	}
 
 	// Return updated profile
-	return s.GetProfile(userID)
+	return s.GetProfile(ctx, userID)
 }
 
 // ChangePassword changes user's password after verifying current password
-func (s *UserService) ChangePassword(userID uint, currentPassword, newPassword string) error {
+func (s *UserService) ChangePassword(ctx contextx.Contextx, userID uint, currentPassword, newPassword string) error {
 	// Get user's auth providers
-	providers, err := s.authProviderRepo.GetByUserID(userID)
+	providers, err := s.authProviderRepo.GetByUserID(ctx, userID)
 	if err != nil {
 		return errors.New("user not found or no password set")
 	}
-	
+
 	// Find email provider
 	var authProvider *models.AuthProvider
 	for _, p := range providers {
@@ -166,7 +167,7 @@ func (s *UserService) ChangePassword(userID uint, currentPassword, newPassword s
 
 	// Update password in auth provider
 	authProvider.Password = string(hashedPassword)
-	if err := s.authProviderRepo.Update(authProvider); err != nil {
+	if err := s.authProviderRepo.Update(ctx, authProvider); err != nil {
 		return err
 	}
 
@@ -174,28 +175,28 @@ func (s *UserService) ChangePassword(userID uint, currentPassword, newPassword s
 }
 
 // GetUserByID retrieves user with basic info (used by middleware)
-func (s *UserService) GetUserByID(userID uint) (*models.User, error) {
-	return s.userRepo.GetByIDWithPreload(userID, "UserInfo")
+func (s *UserService) GetUserByID(ctx contextx.Contextx, userID uint) (*models.User, error) {
+	return s.userRepo.GetByIDWithPreload(ctx, userID, "UserInfo")
 }
 
 // UpdateUserStatus updates user status (active, inactive, suspended, pending)
-func (s *UserService) UpdateUserStatus(userID uint, status models.UserStatus) error {
-	return s.userRepo.UpdateStatus(userID, status)
+func (s *UserService) UpdateUserStatus(ctx contextx.Contextx, userID uint, status models.UserStatus) error {
+	return s.userRepo.UpdateStatus(ctx, userID, status)
 }
 
 // VerifyEmail marks user as email verified
-func (s *UserService) VerifyEmail(userID uint) error {
-	return s.userRepo.VerifyEmail(userID)
+func (s *UserService) VerifyEmail(ctx contextx.Contextx, userID uint) error {
+	return s.userRepo.VerifyEmail(ctx, userID)
 }
 
 // GetUserAuthProviders returns all auth providers for a user
-func (s *UserService) GetUserAuthProviders(userID uint) ([]models.AuthProvider, error) {
-	return s.authProviderRepo.GetByUserID(userID)
+func (s *UserService) GetUserAuthProviders(ctx contextx.Contextx, userID uint) ([]models.AuthProvider, error) {
+	return s.authProviderRepo.GetByUserID(ctx, userID)
 }
 
 // GetAllUsers returns a list of all users with their basic information
-func (s *UserService) GetAllUsers() ([]dto.UserResponse, error) {
-	users, err := s.userRepo.GetAll()
+func (s *UserService) GetAllUsers(ctx contextx.Contextx) ([]dto.UserResponse, error) {
+	users, err := s.userRepo.GetAll(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -217,8 +218,8 @@ func (s *UserService) GetAllUsers() ([]dto.UserResponse, error) {
 }
 
 // SearchUsers searches for users by name or email
-func (s *UserService) SearchUsers(searchTerm string) ([]dto.UserResponse, error) {
-	users, err := s.userRepo.Search(searchTerm)
+func (s *UserService) SearchUsers(ctx contextx.Contextx, searchTerm string) ([]dto.UserResponse, error) {
+	users, err := s.userRepo.Search(ctx, searchTerm)
 	if err != nil {
 		return nil, err
 	}
@@ -240,7 +241,7 @@ func (s *UserService) SearchUsers(searchTerm string) ([]dto.UserResponse, error)
 }
 
 // DeleteUser soft deletes a user and related data
-func (s *UserService) DeleteUser(userID uint) error {
+func (s *UserService) DeleteUser(ctx contextx.Contextx, userID uint) error {
 	tx := s.db.Begin()
 	defer func() {
 		if r := recover(); r != nil {
@@ -274,7 +275,7 @@ func (s *UserService) DeleteUser(userID uint) error {
 }
 
 // CreateUser creates a new user with UserInfo
-func (s *UserService) CreateUser(req dto.CreateUserRequest) (*dto.UserResponse, error) {
+func (s *UserService) CreateUser(ctx contextx.Contextx, req dto.CreateUserRequest) (*dto.UserResponse, error) {
 	// Check if user with this email already exists
 	var existingUserInfo models.UserInfo
 	if err := s.db.Where("email = ?", req.Email).First(&existingUserInfo).Error; err == nil {
@@ -383,7 +384,7 @@ func (s *UserService) GetUserByIDDetailed(userID uint) (*dto.UserResponse, error
 }
 
 // UpdateUser updates user information
-func (s *UserService) UpdateUser(userID uint, req dto.UpdateUserRequest) (*dto.UserResponse, error) {
+func (s *UserService) UpdateUser(ctx contextx.Contextx, userID uint, req dto.UpdateUserRequest) (*dto.UserResponse, error) {
 	// Check if user exists
 	var user models.User
 	if err := s.db.Preload("UserInfo").First(&user, userID).Error; err != nil {

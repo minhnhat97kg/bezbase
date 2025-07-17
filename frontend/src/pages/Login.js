@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
+import { useTranslation } from 'react-i18next';
 import Icon from '../components/common/Icons';
 
 const Login = () => {
@@ -12,6 +13,7 @@ const Login = () => {
   const [loading, setLoading] = useState(false);
   
   const { login } = useAuth();
+  const { t } = useTranslation();
   const navigate = useNavigate();
 
   const handleChange = (e) => {
@@ -46,20 +48,20 @@ const Login = () => {
             <Icon name="rocket" className="text-white text-2xl" />
           </div>
           <h1 className="text-2xl font-bold text-gray-900">BezBase</h1>
-          <p className="text-gray-600 mt-1">Project Management Platform</p>
+          <p className="text-gray-600 mt-1">{t('auth.platformDescription')}</p>
         </div>
         
         {/* Login Card */}
         <div className="bg-white rounded-xl shadow-lg border border-gray-200 p-8">
           <div className="mb-6">
-            <h2 className="text-2xl font-semibold text-gray-900 mb-2">Welcome back</h2>
-            <p className="text-gray-600">Sign in to continue to your projects</p>
+            <h2 className="text-2xl font-semibold text-gray-900 mb-2">{t('auth.welcomeBack')}</h2>
+            <p className="text-gray-600">{t('auth.signInDescription')}</p>
           </div>
           
           <form onSubmit={handleSubmit} className="space-y-6">
             <div>
               <label htmlFor="username" className="block text-sm font-medium text-gray-700 mb-2">
-                Email or Username
+                {t('auth.emailOrUsername')}
               </label>
               <input
                 type="text"
@@ -68,14 +70,14 @@ const Login = () => {
                 value={formData.username}
                 onChange={handleChange}
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors"
-                placeholder="Enter your email or username"
+                placeholder={t('auth.enterEmailOrUsername')}
                 required
               />
             </div>
             
             <div>
               <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
-                Password
+                {t('auth.password')}
               </label>
               <input
                 type="password"
@@ -84,7 +86,7 @@ const Login = () => {
                 value={formData.password}
                 onChange={handleChange}
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors"
-                placeholder="Enter your password"
+                placeholder={t('auth.enterPassword')}
                 required
               />
             </div>
@@ -106,22 +108,22 @@ const Login = () => {
               {loading ? (
                 <div className="flex items-center justify-center">
                   <Icon name="loading" className="mr-2 animate-spin" />
-                  Signing in...
+                  {t('auth.signingIn')}
                 </div>
               ) : (
-                'Sign in'
+                t('auth.signIn')
               )}
             </button>
           </form>
           
           <div className="mt-8 text-center">
             <p className="text-gray-600">
-              Don't have an account?{' '}
+              {t('auth.dontHaveAccount')}{' '}
               <Link 
                 to="/register" 
                 className="text-primary-600 hover:text-primary-700 font-medium"
               >
-                Sign up
+                {t('auth.signUp')}
               </Link>
             </p>
           </div>

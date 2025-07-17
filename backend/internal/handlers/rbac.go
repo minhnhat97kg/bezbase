@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"bezbase/internal/dto"
+	"bezbase/internal/pkg/contextx"
 	"bezbase/internal/services"
 
 	"github.com/labstack/echo/v4"
@@ -39,7 +40,7 @@ func (h *RBACHandler) CreateRole(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, "Invalid request body")
 	}
 
-	role, err := h.rbacService.CreateRole(req)
+	role, err := h.rbacService.CreateRole(contextx.NewWithRequestContext(c), req)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
 	}
@@ -76,7 +77,7 @@ func (h *RBACHandler) GetRoles(c echo.Context) error {
 	searchFilter := c.QueryParam("search")
 	statusFilter := c.QueryParam("status")
 	isSystemParam := c.QueryParam("is_system")
-	
+
 	var isSystemFilter *bool
 	if isSystemParam != "" {
 		isSystem, err := strconv.ParseBool(isSystemParam)
@@ -155,7 +156,7 @@ func (h *RBACHandler) UpdateRole(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, "Invalid request body")
 	}
 
-	role, err := h.rbacService.UpdateRole(uint(roleID), req)
+	role, err := h.rbacService.UpdateRole(contextx.NewWithRequestContext(c), uint(roleID), req)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
 	}
@@ -503,10 +504,10 @@ func (h *RBACHandler) GetResources(c echo.Context) error {
 	// Apply filters
 	var filteredResources []dto.ResourceResponse
 	for _, resource := range allResources {
-		matchesSearch := search == "" || 
+		matchesSearch := search == "" ||
 			strings.Contains(strings.ToLower(resource.Name), strings.ToLower(search)) ||
 			strings.Contains(strings.ToLower(resource.Description), strings.ToLower(search))
-		
+
 		if matchesSearch {
 			filteredResources = append(filteredResources, resource)
 		}
@@ -515,18 +516,18 @@ func (h *RBACHandler) GetResources(c echo.Context) error {
 	// Calculate pagination
 	totalItems := len(filteredResources)
 	totalPages := (totalItems + pagination.PageSize - 1) / pagination.PageSize
-	
+
 	// Apply pagination
 	startIndex := (pagination.Page - 1) * pagination.PageSize
 	endIndex := startIndex + pagination.PageSize
-	
+
 	if startIndex > totalItems {
 		startIndex = totalItems
 	}
 	if endIndex > totalItems {
 		endIndex = totalItems
 	}
-	
+
 	var paginatedResources []dto.ResourceResponse
 	if startIndex < totalItems {
 		paginatedResources = filteredResources[startIndex:endIndex]
@@ -566,10 +567,10 @@ func (h *RBACHandler) GetActions(c echo.Context) error {
 	// Apply filters
 	var filteredActions []dto.ActionResponse
 	for _, action := range allActions {
-		matchesSearch := search == "" || 
+		matchesSearch := search == "" ||
 			strings.Contains(strings.ToLower(action.Name), strings.ToLower(search)) ||
 			strings.Contains(strings.ToLower(action.Description), strings.ToLower(search))
-		
+
 		if matchesSearch {
 			filteredActions = append(filteredActions, action)
 		}
@@ -578,18 +579,18 @@ func (h *RBACHandler) GetActions(c echo.Context) error {
 	// Calculate pagination
 	totalItems := len(filteredActions)
 	totalPages := (totalItems + pagination.PageSize - 1) / pagination.PageSize
-	
+
 	// Apply pagination
 	startIndex := (pagination.Page - 1) * pagination.PageSize
 	endIndex := startIndex + pagination.PageSize
-	
+
 	if startIndex > totalItems {
 		startIndex = totalItems
 	}
 	if endIndex > totalItems {
 		endIndex = totalItems
 	}
-	
+
 	var paginatedActions []dto.ActionResponse
 	if startIndex < totalItems {
 		paginatedActions = filteredActions[startIndex:endIndex]

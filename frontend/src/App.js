@@ -3,6 +3,8 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { AuthProvider } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
 import { useAuth } from './hooks/useAuth';
+import { useTranslation } from 'react-i18next';
+import './i18n';
 import Header from './components/Header';
 import Sidebar from './components/Sidebar';
 import Login from './pages/Login';
@@ -26,12 +28,13 @@ function App() {
 
 function AppLayout() {
   const { user, loading } = useAuth();
+  const { t } = useTranslation();
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
   if (loading) {
     return (
       <div className="min-h-screen flex justify-center items-center bg-gray-50 dark:bg-gray-900">
-        <div className="text-lg text-gray-600 dark:text-gray-300">Loading...</div>
+        <div className="text-lg text-gray-600 dark:text-gray-300">{t('common.loading')}</div>
       </div>
     );
   }
