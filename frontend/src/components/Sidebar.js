@@ -23,6 +23,11 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen }) => {
       icon: <Icon name="user" />,
     },
     {
+      name: 'User Management',
+      href: '/users',
+      icon: <Icon name="users" />,
+    },
+    {
       name: 'Role Management',
       href: '/roles',
       icon: <Icon name="shield" />,

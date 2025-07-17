@@ -1,9 +1,11 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import useResourceActionOptions from '../../hooks/useResourceActionOptions';
 import { rbacService } from '../../services/api';
 import Table from '../common/Table';
 import Icon from '../common/Icons';
 
 const PermissionManager = ({ roles, onRefresh }) => {
+  const { resources: resourceOptions, actions: actionOptions, loading: optionsLoading } = useResourceActionOptions();
   const [permissions, setPermissions] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -32,15 +34,7 @@ const PermissionManager = ({ roles, onRefresh }) => {
   const [sortOrder, setSortOrder] = useState('asc');
 
   // Common resources and actions for quick selection
-  const commonResources = [
-    'users', 'posts', 'comments', 'profile', 'settings', 'dashboard',
-    'files', 'reports', 'notifications', 'audit'
-  ];
-
-  const commonActions = [
-    'create', 'read', 'update', 'delete', 'list', 'view', 'edit',
-    'publish', 'approve', 'reject', 'export', 'import', '*'
-  ];
+  // Deprecated: commonResources and commonActions
 
   const fetchPermissions = useCallback(async () => {
     try {
@@ -272,39 +266,33 @@ const PermissionManager = ({ roles, onRefresh }) => {
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     Resource
                   </label>
-                  <input
-                    type="text"
-                    value={newPermission.resource}
-                    onChange={(e) => setNewPermission({ ...newPermission, resource: e.target.value })}
-                    list="resources"
-                    placeholder="e.g., users, posts"
-                    className="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-600 dark:text-white"
-                    required
-                  />
-                  <datalist id="resources">
-                    {commonResources.map(resource => (
-                      <option key={resource} value={resource} />
-                    ))}
-                  </datalist>
+                <select
+                  value={newPermission.resource}
+                  onChange={(e) => setNewPermission({ ...newPermission, resource: e.target.value })}
+                  className="block w-full mt-2 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+                  required
+                >
+                  <option value="">Select resource...</option>
+                  {resourceOptions.map(resource => (
+                    <option key={resource.name} value={resource.name}>{resource.name}</option>
+                  ))}
+                </select>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     Action
                   </label>
-                  <input
-                    type="text"
-                    value={newPermission.action}
-                    onChange={(e) => setNewPermission({ ...newPermission, action: e.target.value })}
-                    list="actions"
-                    placeholder="e.g., read, write, delete"
-                    className="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-600 dark:text-white"
-                    required
-                  />
-                  <datalist id="actions">
-                    {commonActions.map(action => (
-                      <option key={action} value={action} />
-                    ))}
-                  </datalist>
+                <select
+                  value={newPermission.action}
+                  onChange={(e) => setNewPermission({ ...newPermission, action: e.target.value })}
+                  className="block w-full mt-2 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+                  required
+                >
+                  <option value="">Select action...</option>
+                  {actionOptions.map(action => (
+                    <option key={action.name} value={action.name}>{action.name}</option>
+                  ))}
+                </select>
                 </div>
               </div>
               <div className="flex justify-end">

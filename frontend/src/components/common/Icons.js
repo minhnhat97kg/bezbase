@@ -13,9 +13,13 @@ const ICON_CLASSES = {
   // Actions
   edit: 'fas fa-edit',
   delete: 'fas fa-trash',
+  trash: 'fas fa-trash',
   close: 'fas fa-times',
   search: 'fas fa-search',
   exit: 'fas fa-sign-out-alt',
+  plus: 'fas fa-plus',
+  eye: 'fas fa-eye',
+  star: 'fas fa-star',
   
   // UI Elements
   chevronUp: 'fas fa-chevron-up',
@@ -27,6 +31,7 @@ const ICON_CLASSES = {
   loading: 'fas fa-spinner',
   success: 'fas fa-check-circle',
   warning: 'fas fa-exclamation-triangle',
+  exclamation: 'fas fa-exclamation-triangle',
   
   // Theme
   moon: 'fas fa-moon',

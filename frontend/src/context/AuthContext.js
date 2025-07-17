@@ -15,6 +15,7 @@ export const useAuth = () => {
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
+  const [permissions, setPermissions] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -31,6 +32,18 @@ export const AuthProvider = ({ children }) => {
       }
     }
     
+    // Fetch permissions if token exists
+    const fetchPermissions = async () => {
+      try {
+        const res = await userService.getPermissions();
+        setPermissions(res.data.permissions || []);
+      } catch (err) {
+        setPermissions([]);
+      }
+    };
+    if (token) {
+      fetchPermissions();
+    }
     setLoading(false);
   }, []);
 
@@ -97,6 +110,7 @@ export const AuthProvider = ({ children }) => {
 
   const value = {
     user,
+    permissions,
     login,
     register,
     logout,

@@ -4,6 +4,8 @@ import RolesList from '../components/rbac/RolesList';
 import RoleForm from '../components/rbac/RoleForm';
 import PermissionManager from '../components/rbac/PermissionManager';
 import UserRoleAssignment from '../components/rbac/UserRoleAssignment';
+import ResourcesList from '../components/rbac/ResourcesList';
+import ActionsList from '../components/rbac/ActionsList';
 import Icon from '../components/common/Icons';
 
 const RoleManagement = () => {
@@ -125,6 +127,8 @@ const RoleManagement = () => {
     { id: 'roles', name: 'Roles', icon: 'shield' },
     { id: 'permissions', name: 'Permissions', icon: 'key' },
     { id: 'assignments', name: 'User Assignments', icon: 'users' },
+    { id: 'resources', name: 'Resources', icon: 'settings' },
+    { id: 'actions', name: 'Actions', icon: 'star' },
   ];
 
   const getTabIcon = (iconName) => {
@@ -132,6 +136,8 @@ const RoleManagement = () => {
       shield: <Icon name="shield" />,
       key: <Icon name="key" />,
       users: <Icon name="users" />,
+      settings: <Icon name="settings" />,
+      star: <Icon name="star" />,
     };
     return icons[iconName];
   };
@@ -253,6 +259,20 @@ const RoleManagement = () => {
           <div className="p-6">
             <h2 className="text-lg font-medium text-gray-900 dark:text-white mb-6">User Role Assignments</h2>
             <UserRoleAssignment roles={roles} onRefresh={fetchRoles} />
+          </div>
+        )}
+
+        {activeTab === 'resources' && (
+          <div className="p-6">
+            <h2 className="text-lg font-medium text-gray-900 dark:text-white mb-6">Resource Management</h2>
+            <ResourcesList />
+          </div>
+        )}
+
+        {activeTab === 'actions' && (
+          <div className="p-6">
+            <h2 className="text-lg font-medium text-gray-900 dark:text-white mb-6">Action Management</h2>
+            <ActionsList />
           </div>
         )}
       </div>

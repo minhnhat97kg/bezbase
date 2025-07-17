@@ -19,6 +19,42 @@ type RBACService struct {
 	db       *gorm.DB
 }
 
+// GetPermissionsForUser returns all permissions for a user (resource, action)
+func (r *RBACService) GetPermissionsForUser(userID uint) ([]string, error) {
+	subject := fmt.Sprintf("user:%d", userID)
+	var result []string
+
+	// Get direct permissions for user
+	perms, err := r.enforcer.GetPermissionsForUser(subject)
+	if err != nil {
+		return nil, err
+	}
+	for _, perm := range perms {
+		if len(perm) >= 3 {
+			result = append(result, fmt.Sprintf("%s:%s:%s", subject, perm[1], perm[2]))
+		}
+	}
+
+	// Get roles assigned to user
+	roles, err := r.enforcer.GetRolesForUser(subject)
+	if err != nil {
+		return nil, err
+	}
+	for _, role := range roles {
+		rolePerms, err := r.enforcer.GetPermissionsForUser(role)
+		if err != nil {
+			continue
+		}
+		for _, perm := range rolePerms {
+			if len(perm) >= 3 {
+				result = append(result, fmt.Sprintf("%s:%s:%s", role, perm[1], perm[2]))
+			}
+		}
+	}
+
+	return result, nil
+}
+
 func NewRBACService(db *gorm.DB) (*RBACService, error) {
 	adapter, err := gormadapter.NewAdapterByDBUseTableName(db, "", "rules")
 	if err != nil {

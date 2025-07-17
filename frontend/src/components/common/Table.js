@@ -36,17 +36,20 @@ const Table = ({
     if (!pagination) return null;
 
     const { 
-      currentPage, 
-      totalPages, 
-      pageSize, 
-      total, 
+      currentPage = 1, 
+      totalPages = 1, 
+      pageSize = 10, 
+      total = 0, 
       pageSizeOptions = [5, 10, 25, 50] 
     } = pagination;
+
+    // Ensure totalPages is at least 1
+    const safeTotalPages = Math.max(1, totalPages);
 
     const pages = [];
     const maxVisible = 5;
     let start = Math.max(1, currentPage - Math.floor(maxVisible / 2));
-    let end = Math.min(totalPages, start + maxVisible - 1);
+    let end = Math.min(safeTotalPages, start + maxVisible - 1);
     
     if (end - start + 1 < maxVisible) {
       start = Math.max(1, end - maxVisible + 1);
@@ -79,14 +82,14 @@ const Table = ({
           
           <div className="flex items-center space-x-1">
             <button
-              onClick={() => onPageChange(1)}
+              onClick={() => onPageChange && onPageChange(1)}
               disabled={currentPage === 1}
               className="px-2 py-1 text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 disabled:opacity-50"
             >
               First
             </button>
             <button
-              onClick={() => onPageChange(currentPage - 1)}
+              onClick={() => onPageChange && onPageChange(currentPage - 1)}
               disabled={currentPage === 1}
               className="px-2 py-1 text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 disabled:opacity-50"
             >
@@ -96,7 +99,7 @@ const Table = ({
             {pages.map(page => (
               <button
                 key={page}
-                onClick={() => onPageChange(page)}
+                onClick={() => onPageChange && onPageChange(page)}
                 className={`px-3 py-1 text-sm rounded-md ${
                   page === currentPage
                     ? 'bg-blue-600 text-white'
@@ -108,15 +111,15 @@ const Table = ({
             ))}
             
             <button
-              onClick={() => onPageChange(currentPage + 1)}
-              disabled={currentPage === totalPages}
+              onClick={() => onPageChange && onPageChange(currentPage + 1)}
+              disabled={currentPage === safeTotalPages}
               className="px-2 py-1 text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 disabled:opacity-50"
             >
               Next
             </button>
             <button
-              onClick={() => onPageChange(totalPages)}
-              disabled={currentPage === totalPages}
+              onClick={() => onPageChange && onPageChange(safeTotalPages)}
+              disabled={currentPage === safeTotalPages}
               className="px-2 py-1 text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 disabled:opacity-50"
             >
               Last

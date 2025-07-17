@@ -3,6 +3,7 @@ package handlers
 import (
 	"net/http"
 	"strconv"
+	"strings"
 
 	"bezbase/internal/dto"
 	"bezbase/internal/services"
@@ -429,4 +430,124 @@ func (h *RBACHandler) CheckPermission(c echo.Context) error {
 		"action":   action,
 		"allowed":  allowed,
 	})
+}
+
+// @Summary Get paginated list of resources
+// @Tags RBAC
+// @Produce json
+// @Param page query int false "Page number" default(1)
+// @Param page_size query int false "Page size" default(10)
+// @Param search query string false "Search term"
+// @Success 200 {object} dto.PaginatedResourceResponse
+// @Failure 400 {object} map[string]interface{}
+// @Failure 500 {object} map[string]interface{}
+// @Router /api/v1/rbac/resources [get]
+func (h *RBACHandler) GetResources(c echo.Context) error {
+	pagination := dto.ParsePagination(c)
+	search := c.QueryParam("search")
+
+	// Get all resources
+	allResources := dto.GetAllResources()
+
+	// Apply filters
+	var filteredResources []dto.ResourceResponse
+	for _, resource := range allResources {
+		matchesSearch := search == "" || 
+			strings.Contains(strings.ToLower(resource.Name), strings.ToLower(search)) ||
+			strings.Contains(strings.ToLower(resource.Description), strings.ToLower(search))
+		
+		if matchesSearch {
+			filteredResources = append(filteredResources, resource)
+		}
+	}
+
+	// Calculate pagination
+	totalItems := len(filteredResources)
+	totalPages := (totalItems + pagination.PageSize - 1) / pagination.PageSize
+	
+	// Apply pagination
+	startIndex := (pagination.Page - 1) * pagination.PageSize
+	endIndex := startIndex + pagination.PageSize
+	
+	if startIndex > totalItems {
+		startIndex = totalItems
+	}
+	if endIndex > totalItems {
+		endIndex = totalItems
+	}
+	
+	var paginatedResources []dto.ResourceResponse
+	if startIndex < totalItems {
+		paginatedResources = filteredResources[startIndex:endIndex]
+	}
+
+	response := dto.PaginatedResourceResponse{
+		Data:       paginatedResources,
+		Page:       pagination.Page,
+		PageSize:   pagination.PageSize,
+		TotalItems: totalItems,
+		TotalPages: totalPages,
+	}
+
+	return c.JSON(http.StatusOK, response)
+}
+
+// @Summary Get paginated list of actions
+// @Tags RBAC
+// @Produce json
+// @Param page query int false "Page number" default(1)
+// @Param page_size query int false "Page size" default(10)
+// @Param search query string false "Search term"
+// @Success 200 {object} dto.PaginatedActionResponse
+// @Failure 400 {object} map[string]interface{}
+// @Failure 500 {object} map[string]interface{}
+// @Router /api/v1/rbac/actions [get]
+func (h *RBACHandler) GetActions(c echo.Context) error {
+	pagination := dto.ParsePagination(c)
+	search := c.QueryParam("search")
+
+	// Get all actions
+	allActions := dto.GetAllActions()
+
+	// Apply filters
+	var filteredActions []dto.ActionResponse
+	for _, action := range allActions {
+		matchesSearch := search == "" || 
+			strings.Contains(strings.ToLower(action.Name), strings.ToLower(search)) ||
+			strings.Contains(strings.ToLower(action.Description), strings.ToLower(search))
+		
+		if matchesSearch {
+			filteredActions = append(filteredActions, action)
+		}
+	}
+
+	// Calculate pagination
+	totalItems := len(filteredActions)
+	totalPages := (totalItems + pagination.PageSize - 1) / pagination.PageSize
+	
+	// Apply pagination
+	startIndex := (pagination.Page - 1) * pagination.PageSize
+	endIndex := startIndex + pagination.PageSize
+	
+	if startIndex > totalItems {
+		startIndex = totalItems
+	}
+	if endIndex > totalItems {
+		endIndex = totalItems
+	}
+	
+	var paginatedActions []dto.ActionResponse
+	if startIndex < totalItems {
+		paginatedActions = filteredActions[startIndex:endIndex]
+	}
+
+	response := dto.PaginatedActionResponse{
+		Data:       paginatedActions,
+		Page:       pagination.Page,
+		PageSize:   pagination.PageSize,
+		TotalItems: totalItems,
+		TotalPages: totalPages,
+	}
+
+	return c.JSON(http.StatusOK, response)
 }

@@ -52,6 +52,9 @@ export const authService = {
 };
 
 export const userService = {
+  getPermissions: () => {
+    return api.get('/v1/me/permissions');
+  },
   getProfile: () => {
     return api.get('/v1/profile');
   },
@@ -63,6 +66,22 @@ export const userService = {
   getUsers: (searchTerm = '') => {
     const params = searchTerm ? { search: searchTerm } : {};
     return api.get('/v1/users', { params });
+  },
+  
+  getUser: (userId) => {
+    return api.get(`/v1/users/${userId}`);
+  },
+  
+  createUser: (userData) => {
+    return api.post('/v1/users', userData);
+  },
+  
+  updateUser: (userId, userData) => {
+    return api.put(`/v1/users/${userId}`, userData);
+  },
+  
+  deleteUser: (userId) => {
+    return api.delete(`/v1/users/${userId}`);
   },
 };
 
@@ -142,6 +161,28 @@ export const rbacService = {
     return api.get(`/v1/rbac/users/${userId}/check-permission`, {
       params: { resource, action }
     });
+  },
+
+  // Resource management
+  getResources: (params = {}) => {
+    const queryParams = new URLSearchParams();
+    if (params.page) queryParams.append('page', params.page);
+    if (params.page_size) queryParams.append('page_size', params.page_size);
+    if (params.search) queryParams.append('search', params.search);
+    
+    const url = queryParams.toString() ? `/v1/rbac/resources?${queryParams.toString()}` : '/v1/rbac/resources';
+    return api.get(url);
+  },
+
+  // Action management
+  getActions: (params = {}) => {
+    const queryParams = new URLSearchParams();
+    if (params.page) queryParams.append('page', params.page);
+    if (params.page_size) queryParams.append('page_size', params.page_size);
+    if (params.search) queryParams.append('search', params.search);
+    
+    const url = queryParams.toString() ? `/v1/rbac/actions?${queryParams.toString()}` : '/v1/rbac/actions';
+    return api.get(url);
   },
 };
 
