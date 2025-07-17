@@ -8,6 +8,7 @@ import (
 	"bezbase/internal/database"
 	"bezbase/internal/docs"
 	"bezbase/internal/handlers"
+	"bezbase/internal/i18n"
 	"bezbase/internal/middleware"
 	"bezbase/internal/models"
 	"bezbase/internal/repository"
@@ -39,6 +40,11 @@ func main() {
 		log.Fatal("Failed to run migrations:", err)
 	}
 
+	// Initialize i18n
+	if err := i18n.Initialize(); err != nil {
+		log.Fatal("Failed to initialize i18n:", err)
+	}
+
 	// Swagger documentation
 	docs.SwaggerInfo()
 
@@ -52,6 +58,7 @@ func main() {
 	e.Use(echomiddleware.Logger())
 	e.Use(echomiddleware.Recover())
 	e.Use(echomiddleware.CORS())
+	e.Use(middleware.I18nMiddleware()) // Add i18n middleware
 
 	// Initialize repositories
 	userRepo := repository.NewUserRepository(db)
