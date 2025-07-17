@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { rbacService } from '../../services/api';
 import Icon from '../common/Icons';
 
 const RoleForm = ({ role, onClose, onSuccess }) => {
+  const { t } = useTranslation();
   const [formData, setFormData] = useState({
     name: '',
     display_name: '',
@@ -38,7 +40,7 @@ const RoleForm = ({ role, onClose, onSuccess }) => {
       }
       onSuccess();
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to save role');
+      setError(err.response?.data?.message || t('roles.form.saveFailed'));
     } finally {
       setLoading(false);
     }
@@ -58,7 +60,7 @@ const RoleForm = ({ role, onClose, onSuccess }) => {
         <div className="mt-3">
           <div className="flex justify-between items-center mb-4">
             <h3 className="text-lg font-medium text-gray-900 dark:text-white">
-              {role ? 'Edit Role' : 'Create New Role'}
+              {role ? t('roles.form.editTitle') : t('roles.form.createTitle')}
             </h3>
             <button
               onClick={onClose}
@@ -77,7 +79,7 @@ const RoleForm = ({ role, onClose, onSuccess }) => {
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label htmlFor="name" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                Role Name
+                {t('roles.form.roleName')}
               </label>
               <input
                 type="text"
@@ -88,16 +90,16 @@ const RoleForm = ({ role, onClose, onSuccess }) => {
                 disabled={role && role.is_system}
                 required
                 className="mt-1 block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white disabled:bg-gray-100 dark:disabled:bg-gray-600"
-                placeholder="e.g., content-manager"
+                placeholder={t('roles.form.roleNamePlaceholder')}
               />
               <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                Use lowercase letters, numbers, and hyphens only
+                {t('roles.form.roleNameHelp')}
               </p>
             </div>
 
             <div>
               <label htmlFor="display_name" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                Display Name
+                {t('roles.form.displayName')}
               </label>
               <input
                 type="text"
@@ -107,13 +109,13 @@ const RoleForm = ({ role, onClose, onSuccess }) => {
                 onChange={handleChange}
                 required
                 className="mt-1 block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
-                placeholder="e.g., Content Manager"
+                placeholder={t('roles.form.displayNamePlaceholder')}
               />
             </div>
 
             <div>
               <label htmlFor="description" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                Description
+                {t('roles.form.description')}
               </label>
               <textarea
                 id="description"
@@ -122,7 +124,7 @@ const RoleForm = ({ role, onClose, onSuccess }) => {
                 onChange={handleChange}
                 rows={3}
                 className="mt-1 block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
-                placeholder="Describe the role's purpose and responsibilities"
+                placeholder={t('roles.form.descriptionPlaceholder')}
               />
             </div>
 
@@ -136,7 +138,7 @@ const RoleForm = ({ role, onClose, onSuccess }) => {
                 className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 dark:border-gray-600 rounded"
               />
               <label htmlFor="is_active" className="ml-2 block text-sm text-gray-900 dark:text-white">
-                Active
+                {t('roles.form.activeLabel')}
               </label>
             </div>
 
@@ -146,14 +148,14 @@ const RoleForm = ({ role, onClose, onSuccess }) => {
                 onClick={onClose}
                 className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-600"
               >
-                Cancel
+                {t('common.cancel')}
               </button>
               <button
                 type="submit"
                 disabled={loading}
                 className="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {loading ? 'Saving...' : (role ? 'Update' : 'Create')}
+                {loading ? t('roles.form.saving') : (role ? t('roles.form.updateButton') : t('roles.form.createButton'))}
               </button>
             </div>
           </form>

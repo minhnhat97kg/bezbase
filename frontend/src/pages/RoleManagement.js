@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { rbacService } from '../services/api';
 import RolesList from '../components/rbac/RolesList';
 import RoleForm from '../components/rbac/RoleForm';
@@ -10,10 +11,12 @@ import Icon from '../components/common/Icons';
 import TabLayout from '../components/common/TabLayout';
 
 const RoleManagement = () => {
+  const { t } = useTranslation();
+  
   // Set page title
   useEffect(() => {
-    document.title = 'Role Management - BezBase';
-  }, []);
+    document.title = t('roles.pageTitle');
+  }, [t]);
 
   const [roles, setRoles] = useState([]);
   const [pagination, setPagination] = useState({
@@ -61,7 +64,7 @@ const RoleManagement = () => {
         totalPages: response.data.total_pages
       });
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to fetch roles');
+      setError(err.response?.data?.message || t('roles.errors.fetchFailed'));
     } finally {
       setLoading(false);
     }
@@ -96,12 +99,12 @@ const RoleManagement = () => {
   };
 
   const handleDeleteRole = async (roleName) => {
-    if (window.confirm(`Are you sure you want to delete the role "${roleName}"?`)) {
+    if (window.confirm(`${t('roles.deleteConfirm')} "${roleName}"?`)) {
       try {
         await rbacService.deleteRole(roleName);
         fetchRoles();
       } catch (err) {
-        alert(err.response?.data?.message || 'Failed to delete role');
+        alert(err.response?.data?.message || t('roles.errors.deleteFailed'));
       }
     }
   };
@@ -125,11 +128,11 @@ const RoleManagement = () => {
   };
 
   const tabs = [
-    { id: 'roles', name: 'Roles', icon: 'shield' },
-    { id: 'permissions', name: 'Permissions', icon: 'key' },
-    { id: 'assignments', name: 'User Assignments', icon: 'users' },
-    { id: 'resources', name: 'Resources', icon: 'settings' },
-    { id: 'actions', name: 'Actions', icon: 'star' },
+    { id: 'roles', name: t('roles.tabs.roles'), icon: 'shield' },
+    { id: 'permissions', name: t('roles.tabs.permissions'), icon: 'key' },
+    { id: 'assignments', name: t('roles.tabs.userAssignments'), icon: 'users' },
+    { id: 'resources', name: t('roles.tabs.resources'), icon: 'settings' },
+    { id: 'actions', name: t('roles.tabs.actions'), icon: 'star' },
   ];
 
   if (loading) {
@@ -143,8 +146,8 @@ const RoleManagement = () => {
   return (
     <>
     <TabLayout
-      title="Role Management"
-      subtitle="Manage roles, permissions, and user assignments"
+      title={t('roles.title')}
+      subtitle={t('roles.subtitle')}
       showTabs={true}
       tabs={tabs}
       activeTab={activeTab}
@@ -156,12 +159,12 @@ const RoleManagement = () => {
         {activeTab === 'roles' && (
           <div>
             <div className="flex justify-between items-center mb-6">
-              <h2 className="text-lg font-medium text-gray-900">Roles</h2>
+              <h2 className="text-lg font-medium text-gray-900">{t('roles.tabs.roles')}</h2>
               <button
                 onClick={handleCreateRole}
                 className="bg-primary-600 hover:bg-primary-700 text-white px-4 py-2 rounded-md text-sm font-medium"
               >
-                Create Role
+                {t('roles.addRole')}
               </button>
             </div>
 
@@ -171,7 +174,7 @@ const RoleManagement = () => {
                 <div className="flex-1">
                   <input
                     type="text"
-                    placeholder="Search roles..."
+                    placeholder={t('roles.searchPlaceholder')}
                     value={filters.search}
                     onChange={(e) => handleFilterChange('search', e.target.value)}
                     className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors"
@@ -183,18 +186,18 @@ const RoleManagement = () => {
                     onChange={(e) => handleFilterChange('status', e.target.value)}
                     className="px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors"
                   >
-                    <option value="">All Status</option>
-                    <option value="active">Active</option>
-                    <option value="inactive">Inactive</option>
+                    <option value="">{t('roles.filters.status.all')}</option>
+                    <option value="active">{t('roles.filters.status.active')}</option>
+                    <option value="inactive">{t('roles.filters.status.inactive')}</option>
                   </select>
                   <select
                     value={filters.is_system}
                     onChange={(e) => handleFilterChange('is_system', e.target.value)}
                     className="px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors"
                   >
-                    <option value="">All Types</option>
-                    <option value="true">System</option>
-                    <option value="false">Custom</option>
+                    <option value="">{t('roles.filters.type.all')}</option>
+                    <option value="true">{t('roles.filters.type.system')}</option>
+                    <option value="false">{t('roles.filters.type.custom')}</option>
                   </select>
                 </div>
               </div>
@@ -217,28 +220,28 @@ const RoleManagement = () => {
 
         {activeTab === 'permissions' && (
           <div>
-            <h2 className="text-lg font-medium text-gray-900 mb-6">Permission Management</h2>
+            <h2 className="text-lg font-medium text-gray-900 mb-6">{t('roles.managePermissions')}</h2>
             <PermissionManager roles={roles} onRefresh={fetchRoles} />
           </div>
         )}
 
         {activeTab === 'assignments' && (
           <div>
-            <h2 className="text-lg font-medium text-gray-900 mb-6">User Role Assignments</h2>
+            <h2 className="text-lg font-medium text-gray-900 mb-6">{t('roles.tabs.userAssignments')}</h2>
             <UserRoleAssignment roles={roles} onRefresh={fetchRoles} />
           </div>
         )}
 
         {activeTab === 'resources' && (
           <div>
-            <h2 className="text-lg font-medium text-gray-900 mb-6">Resource Management</h2>
+            <h2 className="text-lg font-medium text-gray-900 mb-6">{t('roles.tabs.resources')}</h2>
             <ResourcesList />
           </div>
         )}
 
         {activeTab === 'actions' && (
           <div>
-            <h2 className="text-lg font-medium text-gray-900 mb-6">Action Management</h2>
+            <h2 className="text-lg font-medium text-gray-900 mb-6">{t('roles.tabs.actions')}</h2>
             <ActionsList />
           </div>
         )}

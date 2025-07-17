@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../hooks/useAuth';
 import Icon from '../components/common/Icons';
 
 const Register = () => {
+  const { t } = useTranslation();
   const [formData, setFormData] = useState({
     username: '',
     email: '',
@@ -49,21 +51,21 @@ const Register = () => {
             <Icon name="rocket" className="text-white text-2xl" />
           </div>
           <h1 className="text-2xl font-bold text-gray-900">BezBase</h1>
-          <p className="text-gray-600 mt-1">Project Management Platform</p>
+          <p className="text-gray-600 mt-1">{t('auth.platformDescription')}</p>
         </div>
         
         {/* Register Card */}
         <div className="bg-white rounded-xl shadow-lg border border-gray-200 p-8">
           <div className="mb-6">
-            <h2 className="text-2xl font-semibold text-gray-900 mb-2">Create your account</h2>
-            <p className="text-gray-600">Join BezBase and start managing your projects</p>
+            <h2 className="text-2xl font-semibold text-gray-900 mb-2">{t('register.title')}</h2>
+            <p className="text-gray-600">{t('register.subtitle')}</p>
           </div>
           
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label htmlFor="first_name" className="block text-sm font-medium text-gray-700 mb-2">
-                  First Name
+                  {t('register.firstName')}
                 </label>
                 <input
                   type="text"
@@ -72,14 +74,14 @@ const Register = () => {
                   value={formData.first_name}
                   onChange={handleChange}
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors"
-                  placeholder="First name"
+                  placeholder={t('register.firstNamePlaceholder')}
                   required
                 />
               </div>
               
               <div>
                 <label htmlFor="last_name" className="block text-sm font-medium text-gray-700 mb-2">
-                  Last Name
+                  {t('register.lastName')}
                 </label>
                 <input
                   type="text"
@@ -88,7 +90,7 @@ const Register = () => {
                   value={formData.last_name}
                   onChange={handleChange}
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors"
-                  placeholder="Last name"
+                  placeholder={t('register.lastNamePlaceholder')}
                   required
                 />
               </div>
@@ -96,7 +98,7 @@ const Register = () => {
             
             <div>
               <label htmlFor="username" className="block text-sm font-medium text-gray-700 mb-2">
-                Username
+                {t('register.username')}
               </label>
               <input
                 type="text"
@@ -105,18 +107,18 @@ const Register = () => {
                 value={formData.username}
                 onChange={handleChange}
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors"
-                placeholder="Choose a username"
+                placeholder={t('register.usernamePlaceholder')}
                 required
                 minLength={3}
                 maxLength={30}
                 pattern="[a-zA-Z0-9_]+"
-                title="Username can only contain letters, numbers, and underscores"
+                title={t('register.usernameHelp')}
               />
             </div>
             
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
-                Email Address
+                {t('auth.email')}
               </label>
               <input
                 type="email"
@@ -125,14 +127,14 @@ const Register = () => {
                 value={formData.email}
                 onChange={handleChange}
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors"
-                placeholder="Enter your email"
+                placeholder={t('register.emailPlaceholder')}
                 required
               />
             </div>
             
             <div>
               <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
-                Password
+                {t('auth.password')}
               </label>
               <input
                 type="password"
@@ -141,7 +143,7 @@ const Register = () => {
                 value={formData.password}
                 onChange={handleChange}
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors"
-                placeholder="Enter password (min. 8 characters)"
+                placeholder={t('register.passwordPlaceholder')}
                 required
                 minLength={8}
               />
@@ -164,22 +166,22 @@ const Register = () => {
               {loading ? (
                 <div className="flex items-center justify-center">
                   <Icon name="loading" className="mr-2 animate-spin" />
-                  Creating account...
+                  {t('register.creatingAccount')}
                 </div>
               ) : (
-                'Create account'
+                t('register.createAccount')
               )}
             </button>
           </form>
           
           <div className="mt-8 text-center">
             <p className="text-gray-600">
-              Already have an account?{' '}
+              {t('register.alreadyHaveAccountText')}{' '}
               <Link 
                 to="/login" 
                 className="text-primary-600 hover:text-primary-700 font-medium"
               >
-                Sign in
+                {t('register.signInLink')}
               </Link>
             </p>
           </div>

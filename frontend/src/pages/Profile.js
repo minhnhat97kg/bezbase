@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../hooks/useAuth';
 import { userService } from '../services/api';
 import Icon from '../components/common/Icons';
 import TabLayout from '../components/common/TabLayout';
 
 const Profile = () => {
+  const { t } = useTranslation();
   const { user, updateUser } = useAuth();
   const [activeTab, setActiveTab] = useState('profile');
   const [loading, setLoading] = useState(false);
@@ -53,7 +55,7 @@ const Profile = () => {
           avatar_url: userData.avatar_url || '',
         });
       } catch (err) {
-        setError('Failed to load profile data');
+        setError(t('profile.errors.loadFailed'));
       }
     };
 
@@ -83,9 +85,9 @@ const Profile = () => {
     try {
       const response = await userService.updateProfile(profileData);
       updateUser(response.data);
-      setMessage('Profile updated successfully');
+      setMessage(t('profile.profileUpdated'));
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to update profile');
+      setError(err.response?.data?.message || t('profile.errors.updateFailed'));
     } finally {
       setLoading(false);
     }
@@ -98,41 +100,41 @@ const Profile = () => {
     setMessage('');
 
     if (passwordData.new_password !== passwordData.confirm_password) {
-      setError('New password and confirm password do not match');
+      setError(t('profile.errors.passwordMismatch'));
       setLoading(false);
       return;
     }
 
     if (passwordData.new_password.length < 8) {
-      setError('Password must be at least 8 characters long');
+      setError(t('profile.errors.passwordMinLength'));
       setLoading(false);
       return;
     }
 
     try {
       await userService.changePassword(passwordData);
-      setMessage('Password changed successfully');
+      setMessage(t('profile.passwordChanged'));
       setPasswordData({
         current_password: '',
         new_password: '',
         confirm_password: '',
       });
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to change password');
+      setError(err.response?.data?.message || t('profile.errors.changeFailed'));
     } finally {
       setLoading(false);
     }
   };
 
   const tabs = [
-    { id: 'profile', name: 'Profile Information', icon: 'user' },
-    { id: 'password', name: 'Change Password', icon: 'shield' },
+    { id: 'profile', name: t('profile.profileInfoTab'), icon: 'user' },
+    { id: 'password', name: t('profile.changePasswordTab'), icon: 'shield' },
   ];
 
   return (
     <TabLayout
-      title="User Profile"
-      subtitle="Manage your account information and security settings"
+      title={t('profile.userProfile')}
+      subtitle={t('profile.profileDescription')}
       showTabs={true}
       tabs={tabs}
       activeTab={activeTab}
@@ -149,7 +151,7 @@ const Profile = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
                     <label htmlFor="username" className="block text-sm font-medium text-gray-700 mb-2">
-                      Username
+                      {t('profile.username')}
                     </label>
                     <input
                       type="text"
@@ -158,18 +160,18 @@ const Profile = () => {
                       value={profileData.username}
                       onChange={handleProfileChange}
                       className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors"
-                      placeholder="Your username"
+                      placeholder={t('profile.usernamePlaceholder')}
                       required
                       minLength={3}
                       maxLength={30}
                       pattern="[a-zA-Z0-9_]+"
-                      title="Username can only contain letters, numbers, and underscores"
+                      title={t('profile.usernameHelp')}
                     />
                   </div>
 
                   <div>
                     <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
-                      Email Address
+                      {t('common.email')}
                     </label>
                     <input
                       type="email"
@@ -178,14 +180,14 @@ const Profile = () => {
                       value={profileData.email}
                       onChange={handleProfileChange}
                       className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors"
-                      placeholder="your.email@example.com"
+                      placeholder={t('profile.emailPlaceholder')}
                       required
                     />
                   </div>
 
                   <div>
                     <label htmlFor="first_name" className="block text-sm font-medium text-gray-700 mb-2">
-                      First Name
+                      {t('users.firstName')}
                     </label>
                     <input
                       type="text"
@@ -194,14 +196,14 @@ const Profile = () => {
                       value={profileData.first_name}
                       onChange={handleProfileChange}
                       className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors"
-                      placeholder="First name"
+                      placeholder={t('profile.firstNamePlaceholder')}
                       required
                     />
                   </div>
 
                   <div>
                     <label htmlFor="last_name" className="block text-sm font-medium text-gray-700 mb-2">
-                      Last Name
+                      {t('users.lastName')}
                     </label>
                     <input
                       type="text"
@@ -210,14 +212,14 @@ const Profile = () => {
                       value={profileData.last_name}
                       onChange={handleProfileChange}
                       className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors"
-                      placeholder="Last name"
+                      placeholder={t('profile.lastNamePlaceholder')}
                       required
                     />
                   </div>
 
                   <div>
                     <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-2">
-                      Phone Number
+                      {t('profile.phone')}
                     </label>
                     <input
                       type="tel"
@@ -226,13 +228,13 @@ const Profile = () => {
                       value={profileData.phone}
                       onChange={handleProfileChange}
                       className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors"
-                      placeholder="+1 (555) 123-4567"
+                      placeholder={t('profile.phonePlaceholder')}
                     />
                   </div>
 
                   <div>
                     <label htmlFor="location" className="block text-sm font-medium text-gray-700 mb-2">
-                      Location
+                      {t('profile.location')}
                     </label>
                     <input
                       type="text"
@@ -241,13 +243,13 @@ const Profile = () => {
                       value={profileData.location}
                       onChange={handleProfileChange}
                       className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors"
-                      placeholder="City, Country"
+                      placeholder={t('profile.locationPlaceholder')}
                     />
                   </div>
 
                   <div>
                     <label htmlFor="website" className="block text-sm font-medium text-gray-700 mb-2">
-                      Website
+                      {t('profile.website')}
                     </label>
                     <input
                       type="url"
@@ -256,13 +258,13 @@ const Profile = () => {
                       value={profileData.website}
                       onChange={handleProfileChange}
                       className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors"
-                      placeholder="https://yourwebsite.com"
+                      placeholder={t('profile.websitePlaceholder')}
                     />
                   </div>
 
                   <div>
                     <label htmlFor="language" className="block text-sm font-medium text-gray-700 mb-2">
-                      Language
+                      {t('profile.language')}
                     </label>
                     <select
                       id="language"
@@ -271,19 +273,19 @@ const Profile = () => {
                       onChange={handleProfileChange}
                       className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors"
                     >
-                      <option value="en">English</option>
-                      <option value="es">Spanish</option>
-                      <option value="fr">French</option>
-                      <option value="de">German</option>
-                      <option value="it">Italian</option>
-                      <option value="pt">Portuguese</option>
+                      <option value="en">{t('profile.languageOptions.en')}</option>
+                      <option value="es">{t('profile.languageOptions.es')}</option>
+                      <option value="fr">{t('profile.languageOptions.fr')}</option>
+                      <option value="de">{t('profile.languageOptions.de')}</option>
+                      <option value="it">{t('profile.languageOptions.it')}</option>
+                      <option value="pt">{t('profile.languageOptions.pt')}</option>
                     </select>
                   </div>
                 </div>
 
                 <div>
                   <label htmlFor="bio" className="block text-sm font-medium text-gray-700 mb-2">
-                    Bio
+                    {t('profile.bio')}
                   </label>
                   <textarea
                     id="bio"
@@ -292,7 +294,7 @@ const Profile = () => {
                     onChange={handleProfileChange}
                     rows={4}
                     className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors"
-                    placeholder="Tell us about yourself..."
+                    placeholder={t('profile.bioPlaceholder')}
                   />
                 </div>
 
@@ -305,10 +307,10 @@ const Profile = () => {
                     {loading ? (
                       <div className="flex items-center">
                         <Icon name="loading" className="mr-2 animate-spin" />
-                        Updating...
+                        {t('profile.updating')}
                       </div>
                     ) : (
-                      'Update Profile'
+                      t('profile.updateProfile')
                     )}
                   </button>
                 </div>
@@ -320,7 +322,7 @@ const Profile = () => {
               <form onSubmit={handlePasswordSubmit} className="space-y-6 max-w-md">
                 <div>
                   <label htmlFor="current_password" className="block text-sm font-medium text-gray-700 mb-2">
-                    Current Password
+                    {t('profile.currentPassword')}
                   </label>
                   <input
                     type="password"
@@ -329,14 +331,14 @@ const Profile = () => {
                     value={passwordData.current_password}
                     onChange={handlePasswordChange}
                     className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors"
-                    placeholder="Enter your current password"
+                    placeholder={t('profile.currentPasswordPlaceholder')}
                     required
                   />
                 </div>
 
                 <div>
                   <label htmlFor="new_password" className="block text-sm font-medium text-gray-700 mb-2">
-                    New Password
+                    {t('profile.newPassword')}
                   </label>
                   <input
                     type="password"
@@ -345,16 +347,16 @@ const Profile = () => {
                     value={passwordData.new_password}
                     onChange={handlePasswordChange}
                     className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors"
-                    placeholder="Enter your new password"
+                    placeholder={t('profile.newPasswordPlaceholder')}
                     required
                     minLength={8}
                   />
-                  <p className="text-sm text-gray-500 mt-1">Password must be at least 8 characters long</p>
+                  <p className="text-sm text-gray-500 mt-1">{t('profile.errors.passwordMinLength')}</p>
                 </div>
 
                 <div>
                   <label htmlFor="confirm_password" className="block text-sm font-medium text-gray-700 mb-2">
-                    Confirm New Password
+                    {t('profile.confirmNewPassword')}
                   </label>
                   <input
                     type="password"
@@ -363,7 +365,7 @@ const Profile = () => {
                     value={passwordData.confirm_password}
                     onChange={handlePasswordChange}
                     className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors"
-                    placeholder="Confirm your new password"
+                    placeholder={t('profile.confirmPasswordPlaceholder')}
                     required
                     minLength={8}
                   />
@@ -378,10 +380,10 @@ const Profile = () => {
                     {loading ? (
                       <div className="flex items-center">
                         <Icon name="loading" className="mr-2 animate-spin" />
-                        Changing...
+                        {t('profile.changing')}
                       </div>
                     ) : (
-                      'Change Password'
+                      t('profile.changePassword')
                     )}
                   </button>
                 </div>

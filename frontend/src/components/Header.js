@@ -129,7 +129,7 @@ const Header = ({ sidebarOpen, setSidebarOpen }) => {
 
                   <button className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-gray-700 transition-colors flex items-center">
                     <Icon name="settings" className="mr-3 text-gray-400" />
-                    Settings
+                    {t('settings')}
                   </button>
 
                   <div className="border-t border-gray-100 dark:border-gray-700">

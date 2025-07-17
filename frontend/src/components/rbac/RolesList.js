@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import Table from '../common/Table';
 import Icon from '../common/Icons';
 
@@ -14,6 +15,7 @@ const RolesList = ({
   sortField, 
   sortOrder 
 }) => {
+  const { t } = useTranslation();
   const getStatusBadge = (isActive) => {
     return (
       <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
@@ -21,7 +23,7 @@ const RolesList = ({
           ? 'bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-100' 
           : 'bg-red-100 text-red-800 dark:bg-red-800 dark:text-red-100'
       }`}>
-        {isActive ? 'Active' : 'Inactive'}
+        {isActive ? t('common.active') : t('common.inactive')}
       </span>
     );
   };
@@ -30,7 +32,7 @@ const RolesList = ({
     if (!isSystem) return null;
     return (
       <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-100">
-        System
+        {t('roles.filters.type.system')}
       </span>
     );
   };
@@ -39,7 +41,7 @@ const RolesList = ({
   const columns = [
     {
       key: 'name',
-      header: 'Role',
+      header: t('roles.resource'),
       nowrap: true,
       sortable: true,
       render: (value, row) => (
@@ -55,28 +57,28 @@ const RolesList = ({
     },
     {
       key: 'description',
-      header: 'Description',
+      header: t('roles.description'),
       render: (value, row) => (
         <div className="text-sm text-gray-900 dark:text-white max-w-xs">
-          {row.description || 'No description'}
+          {row.description || t('roles.noDescription')}
         </div>
       )
     },
     {
       key: 'status',
-      header: 'Status',
+      header: t('common.status'),
       nowrap: true,
       render: (value, row) => getStatusBadge(row.is_active)
     },
     {
       key: 'type',
-      header: 'Type',
+      header: t('roles.type'),
       nowrap: true,
       render: (value, row) => getSystemBadge(row.is_system)
     },
     {
       key: 'created_at',
-      header: 'Created',
+      header: t('common.created'),
       nowrap: true,
       sortable: true,
       render: (value) => (
@@ -87,7 +89,7 @@ const RolesList = ({
     },
     {
       key: 'actions',
-      header: 'Actions',
+      header: t('common.actions'),
       align: 'right',
       nowrap: true,
       render: (value, row) => (
@@ -116,8 +118,8 @@ const RolesList = ({
       columns={columns}
       data={roles}
       loading={loading}
-      emptyMessage="No roles found"
-      emptyDescription="Create your first role to get started"
+      emptyMessage={t('roles.noRoles')}
+      emptyDescription={t('roles.createFirstRole')}
       pagination={pagination}
       onPageChange={onPageChange}
       onPageSizeChange={onPageSizeChange}

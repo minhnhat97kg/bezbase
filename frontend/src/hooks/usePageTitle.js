@@ -1,16 +1,18 @@
 import { useLocation } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 
 const usePageTitle = () => {
   const location = useLocation();
+  const { t } = useTranslation();
   
   const getPageTitle = () => {
     switch (location.pathname) {
       case '/dashboard':
-        return 'Dashboard';
+        return t('pageTitle.dashboard');
       case '/profile':
-        return 'Profile Settings';
+        return t('pageTitle.profile');
       default:
-        return 'Dashboard';
+        return t('pageTitle.default');
     }
   };
 

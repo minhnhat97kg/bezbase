@@ -89,7 +89,7 @@ func main() {
 	apiV1.Use(middleware.JWTMiddleware(cfg.JWTSecret))
 
 	// Profile routes (users can access their own profile)
-	apiV1.GET("/profile", userHandler.GetProfile, middleware.RequirePermission(rbacService, models.ResourceTypeProfile, models.ActionTypeCreate))
+	apiV1.GET("/profile", userHandler.GetProfile, middleware.RequirePermission(rbacService, models.ResourceTypeProfile, models.ActionTypeRead))
 	apiV1.PUT("/profile", userHandler.UpdateProfile, middleware.RequirePermission(rbacService, models.ResourceTypeProfile, models.ActionTypeUpdate))
 	apiV1.PUT("/profile/password", userHandler.ChangePassword, middleware.RequirePermission(rbacService, models.ResourceTypeProfile, models.ActionTypeUpdate))
 	apiV1.GET("/me/permissions", userHandler.GetCurrentUserPermissions)

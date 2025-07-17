@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { userService } from '../services/api';
 import Table from '../components/common/Table';
 import Icon from '../components/common/Icons';
@@ -7,9 +8,10 @@ import CommonLayout from '../components/common/CommonLayout';
 
 const UserManagement = () => {
   const { user: currentUser } = useAuth();
-  
+  const { t } = useTranslation();
+
   useEffect(() => {
-    document.title = 'User Management - BezBase';
+    document.title = t('users.pageTitle');
   }, []);
 
   const [users, setUsers] = useState([]);
@@ -26,7 +28,7 @@ const UserManagement = () => {
     pageSize: 10,
     total: 0,
     totalPages: 1,
-    pageSizeOptions: [5, 10, 25, 50]
+    pageSizeOptions: [1, 5, 10, 25, 50]
   });
 
   const fetchUsers = async () => {
@@ -34,7 +36,7 @@ const UserManagement = () => {
       setLoading(true);
       const response = await userService.getUsers(searchTerm);
       setUsers(response.data);
-      
+
       // Update pagination with current data
       setPagination(prev => ({
         ...prev,
@@ -42,7 +44,7 @@ const UserManagement = () => {
         totalPages: Math.ceil(response.data.length / prev.pageSize)
       }));
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to fetch users');
+      setError(err.response?.data?.message || t('users.errors.fetchFailed'));
     } finally {
       setLoading(false);
     }
@@ -83,10 +85,10 @@ const UserManagement = () => {
   const handleDeleteUser = (user) => {
     // Prevent deletion of current user
     if (currentUser && currentUser.id === user.id) {
-      setError("Cannot delete your own account");
+      setError(t('users.errors.deleteSelf'));
       return;
     }
-    
+
     setUserToDelete(user);
     setShowDeleteConfirm(true);
   };
@@ -100,7 +102,7 @@ const UserManagement = () => {
       setShowDeleteConfirm(false);
       setUserToDelete(null);
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to delete user');
+      setError(err.response?.data?.message || t('users.errors.deleteFailed'));
     }
   };
 
@@ -114,9 +116,9 @@ const UserManagement = () => {
   };
 
   const handlePageSizeChange = (pageSize) => {
-    setPagination(prev => ({ 
-      ...prev, 
-      pageSize, 
+    setPagination(prev => ({
+      ...prev,
+      pageSize,
       currentPage: 1,
       totalPages: Math.ceil(prev.total / pageSize)
     }));
@@ -146,12 +148,11 @@ const UserManagement = () => {
 
   const getEmailVerifiedBadge = (verified) => {
     return (
-      <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-        verified 
-          ? 'bg-green-100 text-green-800' 
+      <span className={`px-2 py-1 text-xs font-medium rounded-full ${verified
+          ? 'bg-green-100 text-green-800'
           : 'bg-red-100 text-red-800'
-      }`}>
-        {verified ? 'Verified' : 'Unverified'}
+        }`}>
+        {verified ? t('users.verified') : t('users.unverified')}
       </span>
     );
   };
@@ -160,7 +161,7 @@ const UserManagement = () => {
     if (!roles || roles.length === 0) {
       return (
         <span className="px-2 py-1 text-xs font-medium rounded-full bg-gray-100 text-gray-800">
-          No roles
+          {t('users.noRoles')}
         </span>
       );
     }
@@ -180,20 +181,20 @@ const UserManagement = () => {
   };
 
   const formatDate = (dateString) => {
-    if (!dateString) return 'Never';
+    if (!dateString) return t('users.never');
     return new Date(dateString).toLocaleDateString();
   };
 
   const columns = [
     {
       key: 'id',
-      header: 'ID',
+      header: t('users.columns.id'),
       sortable: true,
       nowrap: true,
     },
     {
       key: 'first_name',
-      header: 'Name',
+      header: t('users.columns.name'),
       sortable: true,
       render: (value, row) => (
         <div className="flex items-center">
@@ -213,35 +214,35 @@ const UserManagement = () => {
     },
     {
       key: 'status',
-      header: 'Status',
+      header: t('users.columns.status'),
       sortable: true,
       render: (value) => getStatusBadge(value),
     },
     {
       key: 'email_verified',
-      header: 'Email Status',
+      header: t('users.columns.emailStatus'),
       render: (value) => getEmailVerifiedBadge(value),
     },
     {
       key: 'roles',
-      header: 'Roles',
+      header: t('users.columns.roles'),
       render: (value) => getRolesBadges(value),
     },
     {
       key: 'last_login_at',
-      header: 'Last Login',
+      header: t('users.columns.lastLogin'),
       sortable: true,
       render: (value) => formatDate(value),
     },
     {
       key: 'created_at',
-      header: 'Created',
+      header: t('users.columns.created'),
       sortable: true,
       render: (value) => formatDate(value),
     },
     {
       key: 'actions',
-      header: 'Actions',
+      header: t('users.columns.actions'),
       align: 'right',
       render: (value, row) => {
         const isCurrentUser = currentUser && currentUser.id === row.id;
@@ -249,20 +250,20 @@ const UserManagement = () => {
         console.log('Current user:', currentUser);
         console.log('Row user:', row);
         console.log('Is current user:', isCurrentUser);
-        
+
         return (
           <div className="flex items-center space-x-2">
             <button
               onClick={() => handleEditUser(row)}
               className="text-primary-600 hover:text-primary-900"
-              title="Edit user"
+              title={t('users.actions.editTitle')}
             >
               <Icon name="edit" className="w-4 h-4" />
             </button>
             <button
               onClick={() => handleDeleteUser(row)}
               className="text-red-600 hover:text-red-900"
-              title="Delete user"
+              title={t('users.actions.deleteTitle')}
               disabled={isCurrentUser}
               style={{ opacity: isCurrentUser ? 0.5 : 1 }}
             >
@@ -280,75 +281,76 @@ const UserManagement = () => {
       className="bg-primary-600 hover:bg-primary-700 text-white px-4 py-2 rounded-md text-sm font-medium flex items-center space-x-2"
     >
       <Icon name="plus" className="w-4 h-4" />
-      <span>Create User</span>
+      <span>{t('users.createUser')}</span>
     </button>
   );
 
   return (
     <>
-    <CommonLayout
-      title="User Management"
-      subtitle="Manage user accounts and their information"
-      headerActions={headerActions}
-      error={error}
-      onErrorDismiss={() => setError('')}
-      className="max-w-7xl mx-auto"
-    >
-      <div className="mb-6">
-        <div className="flex-1 max-w-md">
-          <input
-            type="text"
-            placeholder="Search users..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors"
-          />
+      <CommonLayout
+        title={t('users.title')}
+        subtitle={t('users.subtitle')}
+        headerActions={headerActions}
+        error={error}
+        onErrorDismiss={() => setError('')}
+        className="max-w-7xl mx-auto"
+      >
+        <div className="mb-6">
+          <div className="flex-1 max-w-md">
+            <input
+              type="text"
+              placeholder={t('users.searchPlaceholder')}
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors"
+            />
+          </div>
         </div>
-      </div>
 
-      <Table
-        columns={columns}
-        data={getPaginatedUsers()}
-        loading={loading}
-        emptyMessage="No users found"
-        emptyDescription="Get started by creating a new user account"
-        pagination={pagination}
-        onPageChange={handlePageChange}
-        onPageSizeChange={handlePageSizeChange}
-      />
-    </CommonLayout>
+        <Table
+          columns={columns}
+          data={getPaginatedUsers()}
+          loading={loading}
+          emptyMessage={t('users.noUsers')}
+          emptyDescription={t('users.emptyDescription')}
+          pagination={pagination}
+          onPageChange={handlePageChange}
+          onPageSizeChange={handlePageSizeChange}
+        />
+      </CommonLayout>
 
-    {/* Create User Modal */}
-    {showCreateForm && (
-      <CreateUserModal
-        onClose={handleFormClose}
-        onSuccess={handleFormSuccess}
-      />
-    )}
+      {/* Create User Modal */}
+      {showCreateForm && (
+        <CreateUserModal
+          onClose={handleFormClose}
+          onSuccess={handleFormSuccess}
+        />
+      )}
 
-    {/* Edit User Modal */}
-    {showEditForm && selectedUser && (
-      <EditUserModal
-        user={selectedUser}
-        onClose={handleFormClose}
-        onSuccess={handleFormSuccess}
-      />
-    )}
+      {/* Edit User Modal */}
+      {showEditForm && selectedUser && (
+        <EditUserModal
+          user={selectedUser}
+          onClose={handleFormClose}
+          onSuccess={handleFormSuccess}
+        />
+      )}
 
-    {/* Delete Confirmation Modal */}
-    {showDeleteConfirm && userToDelete && (
-      <DeleteConfirmModal
-        user={userToDelete}
-        onConfirm={handleDeleteConfirm}
-        onCancel={handleDeleteCancel}
-      />
-    )}
+      {/* Delete Confirmation Modal */}
+      {showDeleteConfirm && userToDelete && (
+        <DeleteConfirmModal
+          user={userToDelete}
+          onConfirm={handleDeleteConfirm}
+          onCancel={handleDeleteCancel}
+        />
+      )}
     </>
   );
 };
 
 // Create User Modal Component
 const CreateUserModal = ({ onClose, onSuccess }) => {
+  const { t } = useTranslation();
   const [formData, setFormData] = useState({
     first_name: '',
     last_name: '',
@@ -374,7 +376,7 @@ const CreateUserModal = ({ onClose, onSuccess }) => {
       await userService.createUser(formData);
       onSuccess();
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to create user');
+      setError(err.response?.data?.message || t('users.errors.createFailed'));
     } finally {
       setLoading(false);
     }
@@ -390,7 +392,7 @@ const CreateUserModal = ({ onClose, onSuccess }) => {
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-md max-h-[90vh] overflow-y-auto">
         <div className="p-6">
           <div className="flex justify-between items-center mb-4">
-            <h3 className="text-lg font-medium text-gray-900 dark:text-white">Create New User</h3>
+            <h3 className="text-lg font-medium text-gray-900 dark:text-white">{t('users.createModal.title')}</h3>
             <button
               onClick={onClose}
               className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
