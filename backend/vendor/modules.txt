@@ -25,9 +25,6 @@ github.com/casbin/gorm-adapter/v3
 # github.com/casbin/govaluate v1.3.0
 ## explicit; go 1.13
 github.com/casbin/govaluate
-# github.com/davecgh/go-spew v1.1.1
-## explicit
-github.com/davecgh/go-spew/spew
 # github.com/dustin/go-humanize v1.0.1
 ## explicit; go 1.16
 github.com/dustin/go-humanize
@@ -128,9 +125,6 @@ github.com/mattn/go-colorable
 # github.com/mattn/go-isatty v0.0.20
 ## explicit; go 1.15
 github.com/mattn/go-isatty
-# github.com/mattn/go-sqlite3 v1.14.22
-## explicit; go 1.19
-github.com/mattn/go-sqlite3
 # github.com/microsoft/go-mssqldb v1.6.0
 ## explicit; go 1.17
 github.com/microsoft/go-mssqldb
@@ -147,17 +141,9 @@ github.com/microsoft/go-mssqldb/internal/github.com/swisscom/mssql-always-encryp
 github.com/microsoft/go-mssqldb/internal/github.com/swisscom/mssql-always-encrypted/pkg/utils
 github.com/microsoft/go-mssqldb/internal/querytext
 github.com/microsoft/go-mssqldb/msdsn
-# github.com/pmezard/go-difflib v1.0.0
-## explicit
-github.com/pmezard/go-difflib/difflib
 # github.com/remyoudompheng/bigfft v0.0.0-20230126093431-47fa9a501578
 ## explicit; go 1.12
 github.com/remyoudompheng/bigfft
-# github.com/stretchr/testify v1.10.0
-## explicit; go 1.17
-github.com/stretchr/testify/assert
-github.com/stretchr/testify/assert/yaml
-github.com/stretchr/testify/require
 # github.com/swaggo/echo-swagger v1.4.1
 ## explicit; go 1.17
 github.com/swaggo/echo-swagger
@@ -237,9 +223,6 @@ gorm.io/driver/mysql
 # gorm.io/driver/postgres v1.5.9
 ## explicit; go 1.19
 gorm.io/driver/postgres
-# gorm.io/driver/sqlite v1.6.0
-## explicit; go 1.20
-gorm.io/driver/sqlite
 # gorm.io/driver/sqlserver v1.5.3
 ## explicit; go 1.14
 gorm.io/driver/sqlserver

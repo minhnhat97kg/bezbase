@@ -10,7 +10,7 @@ import (
 	"bezbase/internal/handlers"
 	"bezbase/internal/middleware"
 	"bezbase/internal/models"
-
+	"bezbase/internal/repository"
 	"bezbase/internal/services"
 
 	"github.com/labstack/echo/v4"
@@ -53,13 +53,20 @@ func main() {
 	e.Use(echomiddleware.Recover())
 	e.Use(echomiddleware.CORS())
 
-	// Initialize RBAC service
-	rbacService, err := services.NewRBACService(db)
+	// Initialize repositories
+	userRepo := repository.NewUserRepository(db)
+	userInfoRepo := repository.NewUserInfoRepository(db)
+	authProviderRepo := repository.NewAuthProviderRepository(db)
+	roleRepo := repository.NewRoleRepository(db)
+	ruleRepo := repository.NewRuleRepository(db)
+
+	// Initialize services
+	rbacService, err := services.NewRBACService(roleRepo, ruleRepo, db)
 	if err != nil {
 		log.Fatal("Failed to initialize RBAC service:", err)
 	}
-	authService := services.NewAuthService(db, cfg.JWTSecret)
-	userService := services.NewUserService(db, rbacService)
+	authService := services.NewAuthService(userRepo, userInfoRepo, authProviderRepo, cfg.JWTSecret, db)
+	userService := services.NewUserService(userRepo, userInfoRepo, authProviderRepo, rbacService, db)
 
 	// Initialize handlers
 	commonHandler := handlers.NewCommonHandler()
@@ -84,6 +91,7 @@ func main() {
 	// Profile routes (users can access their own profile)
 	apiV1.GET("/profile", userHandler.GetProfile, middleware.RequirePermission(rbacService, models.ResourceTypeProfile, models.ActionTypeCreate))
 	apiV1.PUT("/profile", userHandler.UpdateProfile, middleware.RequirePermission(rbacService, models.ResourceTypeProfile, models.ActionTypeUpdate))
+	apiV1.PUT("/profile/password", userHandler.ChangePassword, middleware.RequirePermission(rbacService, models.ResourceTypeProfile, models.ActionTypeUpdate))
 	apiV1.GET("/me/permissions", userHandler.GetCurrentUserPermissions)
 
 	// User management routes (admin only)

@@ -1,21 +1,23 @@
 # BezBase - Fullstack Application
 
-A modern fullstack web application built with Go (Echo framework) backend, React frontend, and PostgreSQL database with JWT authentication.
+A modern fullstack web application built with Go (Echo framework) backend, React frontend, and PostgreSQL database featuring JWT authentication and comprehensive RBAC (Role-Based Access Control) system.
 
 ## 🚀 Features
 
-- **Backend**: Go with Echo framework
-- **Frontend**: React with JavaScript
-- **Database**: PostgreSQL with GORM ORM
-- **Authentication**: JWT-based authentication
-- **Architecture**: Clean separation of handlers and services
-- **Containerization**: Docker and Docker Compose
+- **Backend**: Go with Echo framework and comprehensive API documentation
+- **Frontend**: React with TailwindCSS and responsive design
+- **Database**: PostgreSQL with GORM ORM and automated migrations
+- **Authentication**: JWT-based authentication with secure token management
+- **Authorization**: Advanced RBAC system with roles, permissions, and resources
+- **API Documentation**: Interactive Swagger/OpenAPI documentation
+- **Architecture**: Clean separation of handlers, services, and middleware
+- **Containerization**: Docker and Docker Compose for development and production
 - **Development**: Hot reloading for both frontend and backend
 
 ## 📋 Prerequisites
 
 - [Docker](https://www.docker.com/get-started) and Docker Compose
-- [Go](https://golang.org/doc/install) 1.21+ (for local development)
+- [Go](https://golang.org/doc/install) 1.23+ (for local development)
 - [Node.js](https://nodejs.org/) 18+ (for local development)
 - [PostgreSQL](https://www.postgresql.org/download/) (for local development)
 
@@ -24,39 +26,43 @@ A modern fullstack web application built with Go (Echo framework) backend, React
 ```
 bezbase/
 ├── backend/                 # Go backend application
-│   ├── cmd/                 # Application entry point
-│   │   └── main.go         # Main application file
+│   ├── cmd/                 # Application entry points
+│   │   ├── main.go         # Main application
+│   │   └── migrate/        # Database migration tool
 │   ├── internal/            # Internal packages
-│   │   ├── auth/           # Authentication utilities
 │   │   ├── config/         # Configuration management
 │   │   ├── database/       # Database connection & migrations
+│   │   ├── docs/           # Swagger documentation setup
+│   │   ├── dto/            # Data Transfer Objects
 │   │   ├── handlers/       # HTTP request/response handlers
-│   │   ├── middleware/     # HTTP middleware
-│   │   ├── models/         # Data models & DTOs
+│   │   ├── middleware/     # HTTP middleware (JWT, RBAC)
+│   │   ├── models/         # Database models
+│   │   ├── pkg/            # Shared packages
 │   │   └── services/       # Business logic layer
-│   │       └── user_service.go  # User business logic
+│   ├── docs/               # Generated Swagger documentation
 │   ├── Dockerfile          # Production Docker image
 │   ├── Dockerfile.dev      # Development Docker image
+│   ├── MIGRATIONS.md       # Database migration documentation
+│   ├── RBAC_USAGE.md      # RBAC system usage guide
 │   └── go.mod              # Go dependencies
 ├── frontend/               # React frontend application
 │   ├── src/                # Source code
 │   │   ├── components/     # React components
+│   │   │   ├── common/     # Reusable UI components
+│   │   │   └── rbac/       # RBAC-specific components
 │   │   ├── pages/          # Page components
 │   │   ├── services/       # API services
-│   │   ├── context/        # React context
+│   │   ├── context/        # React context (Auth, Theme)
 │   │   └── hooks/          # Custom hooks
 │   ├── public/             # Public assets
 │   ├── Dockerfile          # Production Docker image
 │   └── package.json        # Node.js dependencies
-├── database/               # Database files
-│   ├── migrations/         # SQL migration files
-│   ├── init.sql           # Database initialization
-│   └── README.md          # Database documentation
+├── database/               # Database initialization
+│   ├── init.sql           # Database and user creation
+│   └── README.md          # Database setup documentation
 ├── docker/                 # Docker configuration
-│   └── nginx.conf         # Nginx configuration
-├── scripts/                # Deployment scripts
-│   ├── deploy-prod.sh     # Production deployment
-│   └── setup-dev.sh       # Development setup
+│   └── nginx.conf         # Nginx reverse proxy config
+├── scripts/                # Deployment and setup scripts
 └── docker-compose.yml     # Docker Compose configuration
 ```
 
@@ -135,9 +141,10 @@ docker-compose up -d
 ```
 
 ### 3. Access the application
-- Frontend: http://localhost:3000
-- Backend API: http://localhost:8080
-- Full application (via Nginx): http://localhost:80
+- **Frontend**: http://localhost:3000
+- **Backend API**: http://localhost:8080
+- **API Documentation**: http://localhost:8080/swagger/
+- **Full application (via Nginx)**: http://localhost:80
 
 ### 4. Stop the application
 ```bash
@@ -198,10 +205,7 @@ docker-compose down
    psql -U postgres -f database/init.sql
    ```
 
-2. **Run migrations**
-   ```bash
-   psql -U bezbase_user -d bezbase -f database/migrations/001_create_users_table.sql
-   ```
+2. **Migrations are automatic** - The application will run migrations on startup
 
 For detailed database setup instructions, see [database/README.md](database/README.md).
 
@@ -221,25 +225,58 @@ npm start
 
 ## 📚 API Documentation
 
-### Authentication Endpoints
+The API is fully documented using Swagger/OpenAPI 3.0. When the backend is running, visit:
+- **Interactive Swagger UI**: http://localhost:8080/swagger/
 
-- `POST /api/auth/register` - Register a new user
-- `POST /api/auth/login` - Login user
+### Main API Groups
 
-### Protected Endpoints
+#### Authentication Endpoints
+- `POST /auth/register` - Register a new user
+- `POST /auth/login` - Login user
 
-- `GET /api/protected/profile` - Get user profile
-- `PUT /api/protected/profile` - Update user profile
+#### User Management (Protected)
+- `GET /v1/profile` - Get current user profile
+- `PUT /v1/profile` - Update current user profile
+- `GET /v1/me/permissions` - Get current user permissions
+- `GET /v1/users` - List all users (admin only)
+- `POST /v1/users` - Create new user (admin only)
+- `GET /v1/users/{id}` - Get user by ID (admin only)
+- `PUT /v1/users/{id}` - Update user (admin only)
+- `DELETE /v1/users/{id}` - Delete user (admin only)
 
-### Public Endpoints
+#### RBAC Management (Protected)
+- `GET /v1/rbac/roles` - List roles with pagination
+- `POST /v1/rbac/roles` - Create new role
+- `GET /v1/rbac/roles/{id}` - Get role by ID
+- `PUT /v1/rbac/roles/{id}` - Update role
+- `DELETE /v1/rbac/roles/{role}` - Delete role
+- `GET /v1/rbac/permissions` - List permissions with pagination
+- `POST /v1/rbac/permissions` - Add permission to role
+- `DELETE /v1/rbac/permissions` - Remove permission from role
+- `GET /v1/rbac/resources` - List available resources
+- `GET /v1/rbac/actions` - List available actions
+- `POST /v1/rbac/users/assign-role` - Assign role to user
+- `POST /v1/rbac/users/remove-role` - Remove role from user
+- `GET /v1/rbac/users/{id}/roles` - Get user roles
+- `GET /v1/rbac/users/{id}/check-permission` - Check user permission
 
-- `GET /api/health` - Health check
+#### System Endpoints
+- `GET /health` - Health check
+
+### Authentication
+
+All protected endpoints require a JWT token:
+
+```bash
+curl -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  http://localhost:8080/v1/profile
+```
 
 ### Example API Usage
 
 **Register a new user:**
 ```bash
-curl -X POST http://localhost:8080/api/auth/register \
+curl -X POST http://localhost:8080/auth/register \
   -H "Content-Type: application/json" \
   -d '{
     "email": "user@example.com",
@@ -251,18 +288,12 @@ curl -X POST http://localhost:8080/api/auth/register \
 
 **Login:**
 ```bash
-curl -X POST http://localhost:8080/api/auth/login \
+curl -X POST http://localhost:8080/auth/login \
   -H "Content-Type: application/json" \
   -d '{
-    "email": "user@example.com",
+    "username": "user@example.com",
     "password": "password123"
   }'
-```
-
-**Get profile (with JWT token):**
-```bash
-curl -X GET http://localhost:8080/api/protected/profile \
-  -H "Authorization: Bearer YOUR_JWT_TOKEN"
 ```
 
 ## 🏗️ Architecture
@@ -281,33 +312,53 @@ The backend follows a clean layered architecture pattern:
 - Manages authentication and authorization logic
 - Independent of HTTP layer for better testability
 
+### Middleware Layer (`/middleware`)
+- JWT authentication middleware
+- RBAC authorization middleware
+- Request logging and error handling
+
+### DTO Layer (`/dto`)
+- Data Transfer Objects for API requests/responses
+- Input validation and serialization
+- Clean separation between API and database models
+
 ### Benefits
 - **Separation of Concerns**: HTTP handling vs business logic
 - **Testability**: Services can be unit tested independently
 - **Reusability**: Business logic can be used by different handlers
 - **Maintainability**: Clear boundaries between layers
 
-## 🔐 Authentication
+## 🔐 Authentication & Authorization
 
-The application uses JWT (JSON Web Tokens) for authentication:
-
+### JWT Authentication
 - Tokens are generated on login/register
 - Tokens expire after 24 hours
 - Protected routes require `Authorization: Bearer <token>` header
 - Frontend automatically handles token storage and API requests
 
+### RBAC (Role-Based Access Control)
+- **Roles**: Admin, Moderator, User (with custom roles support)
+- **Resources**: Users, Posts, Profile, Admin, Permissions, All
+- **Actions**: Create, Read, Update, Delete, All
+- **Permissions**: Fine-grained access control per role
+- **Middleware**: Automatic permission checking on protected routes
+
+For detailed RBAC usage, see [backend/RBAC_USAGE.md](backend/RBAC_USAGE.md).
+
 ## 🌐 Environment Variables
 
 ### Backend (.env)
 ```
-DATABASE_URL=postgres://user:password@localhost/bezbase?sslmode=disable
+DATABASE_URL=postgres://bezbase_user:bezbase_password@localhost/bezbase?sslmode=disable
 JWT_SECRET=your-secret-key-change-this-in-production
 PORT=8080
+ENVIRONMENT=development
 ```
 
 ### Frontend (.env)
 ```
-REACT_APP_API_URL=http://localhost:8080/api
+REACT_APP_API_URL=http://localhost:8080
+REACT_APP_ENV=development
 ```
 
 ## 🧪 Testing
@@ -352,6 +403,9 @@ npm run build
 - **Docker Compose**: Container orchestration
 - **PostgreSQL**: Database with GORM ORM
 - **GORM**: Auto-migrations and database operations
+- **Swagger**: API documentation generation
+- **TailwindCSS**: Utility-first CSS framework
+- **Echo**: High performance Go web framework
 
 ## 📁 Key Files
 
@@ -360,6 +414,8 @@ npm run build
 - `backend/cmd/main.go` - Backend application entry point
 - `frontend/src/App.js` - Frontend application entry point
 - `database/init.sql` - Database initialization script
+- `backend/docs/` - Generated API documentation
+- `Makefile` - Development task automation
 
 ## 🚀 Deployment
 
@@ -381,7 +437,8 @@ npm run build
 2. Create a feature branch
 3. Make your changes
 4. Add tests if applicable
-5. Submit a pull request
+5. Update documentation
+6. Submit a pull request
 
 ## 📄 License
 
@@ -406,6 +463,11 @@ This project is licensed under the MIT License.
    - Check Dockerfile syntax
    - Verify all required files exist
 
+4. **RBAC permissions not working**
+   - Check user roles assignment
+   - Verify permission configuration
+   - Review middleware logs
+
 ### Getting Help
 
 If you encounter issues:
@@ -413,7 +475,8 @@ If you encounter issues:
 2. Verify environment variables
 3. Check database connectivity
 4. Review API endpoints and authentication
+5. Consult the API documentation at `/swagger/`
 
 ---
 
-**Happy coding! 🎉**# bezbase
+**Happy coding! 🎉**

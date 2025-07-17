@@ -63,6 +63,10 @@ export const userService = {
     return api.put('/v1/profile', userData);
   },
   
+  changePassword: (passwordData) => {
+    return api.put('/v1/profile/password', passwordData);
+  },
+  
   getUsers: (searchTerm = '') => {
     const params = searchTerm ? { search: searchTerm } : {};
     return api.get('/v1/users', { params });

@@ -9,6 +9,7 @@ import (
 type UserInfo struct {
 	ID          uint           `json:"id" gorm:"primaryKey"`
 	UserID      uint           `json:"user_id" gorm:"not null;uniqueIndex"` // One-to-one with User
+	Username    string         `json:"username" gorm:"not null;uniqueIndex"` // Unique username for login
 	FirstName   string         `json:"first_name" gorm:"not null"`
 	LastName    string         `json:"last_name" gorm:"not null"`
 	Email       string         `json:"email" gorm:"not null;uniqueIndex"` // Primary email for display

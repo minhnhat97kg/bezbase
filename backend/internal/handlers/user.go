@@ -23,6 +23,14 @@ func NewUserHandler(userService *services.UserService, rbacService *services.RBA
 	}
 }
 
+// @Summary Get current user permissions
+// @Tags User
+// @Security BearerAuth
+// @Produce json
+// @Success 200 {object} map[string]interface{}
+// @Failure 401 {object} map[string]interface{}
+// @Failure 500 {object} map[string]interface{}
+// @Router /v1/me/permissions [get]
 // GetCurrentUserPermissions returns all permissions for the current user
 func (h *UserHandler) GetCurrentUserPermissions(c echo.Context) error {
 	claims, ok := c.Get("user").(*auth.Claims)
@@ -42,6 +50,14 @@ func (h *UserHandler) GetCurrentUserPermissions(c echo.Context) error {
 	})
 }
 
+// @Summary Get current user profile
+// @Tags User
+// @Security BearerAuth
+// @Produce json
+// @Success 200 {object} dto.UserResponse
+// @Failure 401 {object} map[string]interface{}
+// @Failure 404 {object} map[string]interface{}
+// @Router /v1/profile [get]
 func (h *UserHandler) GetProfile(c echo.Context) error {
 	claims := c.Get("user").(*auth.Claims)
 
@@ -53,6 +69,17 @@ func (h *UserHandler) GetProfile(c echo.Context) error {
 	return c.JSON(http.StatusOK, user)
 }
 
+// @Summary Update current user profile
+// @Tags User
+// @Security BearerAuth
+// @Accept json
+// @Produce json
+// @Param request body dto.UpdateProfileRequest true "Profile update request"
+// @Success 200 {object} dto.UserResponse
+// @Failure 400 {object} map[string]interface{}
+// @Failure 401 {object} map[string]interface{}
+// @Failure 500 {object} map[string]interface{}
+// @Router /v1/profile [put]
 func (h *UserHandler) UpdateProfile(c echo.Context) error {
 	claims := c.Get("user").(*auth.Claims)
 
@@ -69,6 +96,53 @@ func (h *UserHandler) UpdateProfile(c echo.Context) error {
 	return c.JSON(http.StatusOK, user)
 }
 
+// @Summary Change current user password
+// @Tags User
+// @Security BearerAuth
+// @Accept json
+// @Produce json
+// @Param request body dto.ChangePasswordRequest true "Password change request"
+// @Success 200 {object} map[string]interface{}
+// @Failure 400 {object} map[string]interface{}
+// @Failure 401 {object} map[string]interface{}
+// @Failure 500 {object} map[string]interface{}
+// @Router /v1/profile/password [put]
+func (h *UserHandler) ChangePassword(c echo.Context) error {
+	claims := c.Get("user").(*auth.Claims)
+
+	var req dto.ChangePasswordRequest
+	if err := c.Bind(&req); err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, "Invalid request body")
+	}
+
+	// Validate password confirmation
+	if req.NewPassword != req.ConfirmPassword {
+		return echo.NewHTTPError(http.StatusBadRequest, "New password and confirm password do not match")
+	}
+
+	err := h.userService.ChangePassword(claims.UserID, req.CurrentPassword, req.NewPassword)
+	if err != nil {
+		if err.Error() == "invalid current password" {
+			return echo.NewHTTPError(http.StatusBadRequest, "Current password is incorrect")
+		}
+		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
+	}
+
+	return c.JSON(http.StatusOK, map[string]interface{}{
+		"message": "Password changed successfully",
+	})
+}
+
+// @Summary Get all users (admin only)
+// @Tags User
+// @Security BearerAuth
+// @Produce json
+// @Param search query string false "Search users by name or email"
+// @Success 200 {array} dto.UserResponse
+// @Failure 401 {object} map[string]interface{}
+// @Failure 403 {object} map[string]interface{}
+// @Failure 500 {object} map[string]interface{}
+// @Router /v1/users [get]
 func (h *UserHandler) GetUsers(c echo.Context) error {
 	// Get search query parameter
 	search := c.QueryParam("search")
@@ -89,6 +163,17 @@ func (h *UserHandler) GetUsers(c echo.Context) error {
 	return c.JSON(http.StatusOK, users)
 }
 
+// @Summary Get user by ID (admin only)
+// @Tags User
+// @Security BearerAuth
+// @Produce json
+// @Param id path string true "User ID"
+// @Success 200 {object} dto.UserResponse
+// @Failure 400 {object} map[string]interface{}
+// @Failure 401 {object} map[string]interface{}
+// @Failure 403 {object} map[string]interface{}
+// @Failure 404 {object} map[string]interface{}
+// @Router /v1/users/{id} [get]
 func (h *UserHandler) GetUser(c echo.Context) error {
 	userID := c.Param("id")
 
@@ -106,6 +191,18 @@ func (h *UserHandler) GetUser(c echo.Context) error {
 	return c.JSON(http.StatusOK, user)
 }
 
+// @Summary Create a new user (admin only)
+// @Tags User
+// @Security BearerAuth
+// @Accept json
+// @Produce json
+// @Param request body dto.CreateUserRequest true "User creation request"
+// @Success 201 {object} dto.UserResponse
+// @Failure 400 {object} map[string]interface{}
+// @Failure 401 {object} map[string]interface{}
+// @Failure 403 {object} map[string]interface{}
+// @Failure 500 {object} map[string]interface{}
+// @Router /v1/users [post]
 func (h *UserHandler) CreateUser(c echo.Context) error {
 	var req dto.CreateUserRequest
 	if err := c.Bind(&req); err != nil {
@@ -125,6 +222,19 @@ func (h *UserHandler) CreateUser(c echo.Context) error {
 	return c.JSON(http.StatusCreated, user)
 }
 
+// @Summary Update user by ID (admin only)
+// @Tags User
+// @Security BearerAuth
+// @Accept json
+// @Produce json
+// @Param id path string true "User ID"
+// @Param request body dto.UpdateUserRequest true "User update request"
+// @Success 200 {object} dto.UserResponse
+// @Failure 400 {object} map[string]interface{}
+// @Failure 401 {object} map[string]interface{}
+// @Failure 403 {object} map[string]interface{}
+// @Failure 500 {object} map[string]interface{}
+// @Router /v1/users/{id} [put]
 func (h *UserHandler) UpdateUser(c echo.Context) error {
 	userID := c.Param("id")
 
@@ -147,6 +257,16 @@ func (h *UserHandler) UpdateUser(c echo.Context) error {
 	return c.JSON(http.StatusOK, user)
 }
 
+// @Summary Delete user by ID (admin only)
+// @Tags User
+// @Security BearerAuth
+// @Param id path string true "User ID"
+// @Success 200 {object} map[string]interface{}
+// @Failure 400 {object} map[string]interface{}
+// @Failure 401 {object} map[string]interface{}
+// @Failure 403 {object} map[string]interface{}
+// @Failure 500 {object} map[string]interface{}
+// @Router /v1/users/{id} [delete]
 func (h *UserHandler) DeleteUser(c echo.Context) error {
 	userID := c.Param("id")
 

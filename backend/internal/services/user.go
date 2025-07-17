@@ -5,28 +5,41 @@ import (
 
 	"bezbase/internal/dto"
 	"bezbase/internal/models"
+	"bezbase/internal/repository"
 
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
 )
 
 type UserService struct {
-	db          *gorm.DB
-	rbacService *RBACService
+	userRepo         repository.UserRepository
+	userInfoRepo     repository.UserInfoRepository
+	authProviderRepo repository.AuthProviderRepository
+	rbacService      *RBACService
+	db               *gorm.DB
 }
 
-func NewUserService(db *gorm.DB, rbacService *RBACService) *UserService {
+func NewUserService(
+	userRepo repository.UserRepository,
+	userInfoRepo repository.UserInfoRepository,
+	authProviderRepo repository.AuthProviderRepository,
+	rbacService *RBACService,
+	db *gorm.DB,
+) *UserService {
 	return &UserService{
-		db:          db,
-		rbacService: rbacService,
+		userRepo:         userRepo,
+		userInfoRepo:     userInfoRepo,
+		authProviderRepo: authProviderRepo,
+		rbacService:      rbacService,
+		db:               db,
 	}
 }
 
 // GetProfile retrieves user profile with all user information
 func (s *UserService) GetProfile(userID uint) (*dto.UserResponse, error) {
-	var user models.User
-	if err := s.db.Preload("UserInfo").First(&user, userID).Error; err != nil {
-		return nil, errors.New("user not found")
+	user, err := s.userRepo.GetByIDWithPreload(userID, "UserInfo")
+	if err != nil {
+		return nil, err
 	}
 
 	var roles []string
@@ -37,124 +50,154 @@ func (s *UserService) GetProfile(userID uint) (*dto.UserResponse, error) {
 		}
 	}
 
-	response := dto.ToUserResponseWithRoles(&user, roles)
+	response := dto.ToUserResponseWithRoles(user, roles)
 	return &response, nil
 }
 
 // UpdateProfile updates user information in UserInfo table
 func (s *UserService) UpdateProfile(userID uint, req dto.UpdateProfileRequest) (*dto.UserResponse, error) {
-	// Start transaction for atomic update
-	tx := s.db.Begin()
-	defer func() {
-		if r := recover(); r != nil {
-			tx.Rollback()
-		}
-	}()
-
 	// Check if user exists
-	var user models.User
-	if err := tx.First(&user, userID).Error; err != nil {
-		tx.Rollback()
-		return nil, errors.New("user not found")
+	_, err := s.userRepo.GetByID(userID)
+	if err != nil {
+		return nil, err
 	}
 
-	// Update UserInfo
-	var userInfo models.UserInfo
-	if err := tx.Where("user_id = ?", userID).First(&userInfo).Error; err != nil {
-		tx.Rollback()
-		return nil, errors.New("user info not found")
+	// Get UserInfo
+	userInfo, err := s.userInfoRepo.GetByUserID(userID)
+	if err != nil {
+		return nil, err
+	}
+
+	// Check if username is being changed and if it's already taken
+	if req.Username != "" && req.Username != userInfo.Username {
+		taken, err := s.userInfoRepo.IsUsernameTaken(req.Username, userID)
+		if err != nil {
+			return nil, errors.New("failed to check username availability")
+		}
+		if taken {
+			return nil, errors.New("username already taken")
+		}
+	}
+
+	// Check if email is being changed and if it's already taken
+	if req.Email != "" && req.Email != userInfo.Email {
+		taken, err := s.userInfoRepo.IsEmailTaken(req.Email, userID)
+		if err != nil {
+			return nil, errors.New("failed to check email availability")
+		}
+		if taken {
+			return nil, errors.New("email already taken")
+		}
 	}
 
 	// Update fields that are provided
+	if req.Username != "" {
+		userInfo.Username = req.Username
+	}
 	if req.FirstName != "" {
 		userInfo.FirstName = req.FirstName
 	}
 	if req.LastName != "" {
 		userInfo.LastName = req.LastName
 	}
-	// if req.AvatarURL != "" {
-	// 	userInfo.AvatarURL = req.AvatarURL
-	// }
+	if req.Email != "" {
+		userInfo.Email = req.Email
+	}
+	if req.AvatarURL != "" {
+		userInfo.AvatarURL = req.AvatarURL
+	}
 	if req.Language != "" {
 		userInfo.Language = req.Language
 	}
 	if req.Timezone != "" {
 		userInfo.Timezone = req.Timezone
 	}
-
-	if err := tx.Save(&userInfo).Error; err != nil {
-		tx.Rollback()
-		return nil, errors.New("failed to update profile")
+	if req.Bio != "" {
+		userInfo.Bio = req.Bio
+	}
+	if req.Location != "" {
+		userInfo.Location = req.Location
+	}
+	if req.Website != "" {
+		userInfo.Website = req.Website
+	}
+	if req.Phone != "" {
+		userInfo.Phone = req.Phone
 	}
 
-	// Commit transaction
-	if err := tx.Commit().Error; err != nil {
-		return nil, errors.New("failed to save profile changes")
+	if err := s.userInfoRepo.Update(userInfo); err != nil {
+		return nil, err
 	}
 
 	// Return updated profile
 	return s.GetProfile(userID)
 }
 
-// GetUserByID retrieves user with basic info (used by middleware)
-func (s *UserService) GetUserByID(userID uint) (*models.User, error) {
-	var user models.User
-	if err := s.db.Preload("UserInfo").First(&user, userID).Error; err != nil {
-		return nil, errors.New("user not found")
+// ChangePassword changes user's password after verifying current password
+func (s *UserService) ChangePassword(userID uint, currentPassword, newPassword string) error {
+	// Get user's auth providers
+	providers, err := s.authProviderRepo.GetByUserID(userID)
+	if err != nil {
+		return errors.New("user not found or no password set")
+	}
+	
+	// Find email provider
+	var authProvider *models.AuthProvider
+	for _, p := range providers {
+		if p.Provider == models.ProviderEmail {
+			authProvider = &p
+			break
+		}
+	}
+	if authProvider == nil {
+		return errors.New("user not found or no password set")
 	}
 
-	return &user, nil
+	// Verify current password
+	if err := bcrypt.CompareHashAndPassword([]byte(authProvider.Password), []byte(currentPassword)); err != nil {
+		return errors.New("invalid current password")
+	}
+
+	// Hash new password
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(newPassword), bcrypt.DefaultCost)
+	if err != nil {
+		return errors.New("failed to hash new password")
+	}
+
+	// Update password in auth provider
+	authProvider.Password = string(hashedPassword)
+	if err := s.authProviderRepo.Update(authProvider); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// GetUserByID retrieves user with basic info (used by middleware)
+func (s *UserService) GetUserByID(userID uint) (*models.User, error) {
+	return s.userRepo.GetByIDWithPreload(userID, "UserInfo")
 }
 
 // UpdateUserStatus updates user status (active, inactive, suspended, pending)
 func (s *UserService) UpdateUserStatus(userID uint, status models.UserStatus) error {
-	var user models.User
-	if err := s.db.First(&user, userID).Error; err != nil {
-		return errors.New("user not found")
-	}
-
-	user.Status = status
-	if err := s.db.Save(&user).Error; err != nil {
-		return errors.New("failed to update user status")
-	}
-
-	return nil
+	return s.userRepo.UpdateStatus(userID, status)
 }
 
 // VerifyEmail marks user as email verified
 func (s *UserService) VerifyEmail(userID uint) error {
-	var user models.User
-	if err := s.db.First(&user, userID).Error; err != nil {
-		return errors.New("user not found")
-	}
-
-	user.EmailVerified = true
-	if status := user.Status; status == models.UserStatusPending {
-		user.Status = models.UserStatusActive
-	}
-
-	if err := s.db.Save(&user).Error; err != nil {
-		return errors.New("failed to verify email")
-	}
-
-	return nil
+	return s.userRepo.VerifyEmail(userID)
 }
 
 // GetUserAuthProviders returns all auth providers for a user
 func (s *UserService) GetUserAuthProviders(userID uint) ([]models.AuthProvider, error) {
-	var providers []models.AuthProvider
-	if err := s.db.Where("user_id = ?", userID).Find(&providers).Error; err != nil {
-		return nil, errors.New("failed to get auth providers")
-	}
-
-	return providers, nil
+	return s.authProviderRepo.GetByUserID(userID)
 }
 
 // GetAllUsers returns a list of all users with their basic information
 func (s *UserService) GetAllUsers() ([]dto.UserResponse, error) {
-	var users []models.User
-	if err := s.db.Preload("UserInfo").Find(&users).Error; err != nil {
-		return nil, errors.New("failed to get users")
+	users, err := s.userRepo.GetAll()
+	if err != nil {
+		return nil, err
 	}
 
 	var userResponses []dto.UserResponse
@@ -175,17 +218,9 @@ func (s *UserService) GetAllUsers() ([]dto.UserResponse, error) {
 
 // SearchUsers searches for users by name or email
 func (s *UserService) SearchUsers(searchTerm string) ([]dto.UserResponse, error) {
-	var users []models.User
-
-	// Search in both UserInfo (first_name, last_name, email) and Users table
-	searchPattern := "%" + searchTerm + "%"
-
-	if err := s.db.Preload("UserInfo").
-		Joins("LEFT JOIN user_info ON users.id = user_info.user_id").
-		Where("user_info.first_name ILIKE ? OR user_info.last_name ILIKE ? OR user_info.email ILIKE ?",
-			searchPattern, searchPattern, searchPattern).
-		Find(&users).Error; err != nil {
-		return nil, errors.New("failed to search users")
+	users, err := s.userRepo.Search(searchTerm)
+	if err != nil {
+		return nil, err
 	}
 
 	var userResponses []dto.UserResponse
@@ -241,9 +276,14 @@ func (s *UserService) DeleteUser(userID uint) error {
 // CreateUser creates a new user with UserInfo
 func (s *UserService) CreateUser(req dto.CreateUserRequest) (*dto.UserResponse, error) {
 	// Check if user with this email already exists
-	var existingUser models.User
-	if err := s.db.Joins("UserInfo").Where("user_info.email = ?", req.Email).First(&existingUser).Error; err == nil {
+	var existingUserInfo models.UserInfo
+	if err := s.db.Where("email = ?", req.Email).First(&existingUserInfo).Error; err == nil {
 		return nil, errors.New("user with this email already exists")
+	}
+
+	// Check if username is already taken
+	if err := s.db.Where("username = ?", req.Username).First(&existingUserInfo).Error; err == nil {
+		return nil, errors.New("username already taken")
 	}
 
 	// Hash the password
@@ -274,6 +314,7 @@ func (s *UserService) CreateUser(req dto.CreateUserRequest) (*dto.UserResponse, 
 	// Create user info record
 	userInfo := models.UserInfo{
 		UserID:    user.ID,
+		Username:  req.Username,
 		FirstName: req.FirstName,
 		LastName:  req.LastName,
 		Email:     req.Email,
@@ -295,6 +336,7 @@ func (s *UserService) CreateUser(req dto.CreateUserRequest) (*dto.UserResponse, 
 		UserID:     user.ID,
 		Provider:   models.ProviderEmail,
 		ProviderID: req.Email,
+		UserName:   req.Username,
 		Password:   string(hashedPassword),
 	}
 

@@ -19,16 +19,26 @@ func NewAuthHandler(authService *services.AuthService) *AuthHandler {
 	}
 }
 
+// @Summary Register a new user
+// @Tags Auth
+// @Accept json
+// @Produce json
+// @Param request body dto.RegisterRequest true "User registration request"
+// @Success 201 {object} dto.AuthResponse
+// @Failure 400 {object} map[string]interface{}
+// @Failure 409 {object} map[string]interface{}
+// @Failure 500 {object} map[string]interface{}
+// @Router /auth/register [post]
 func (h *AuthHandler) Register(c echo.Context) error {
 	var req dto.RegisterRequest
 	if err := c.Bind(&req); err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, "Invalid request body")
 	}
 
-	response, err := h.authService.RegisterWithEmail(req)
+	response, err := h.authService.Register(req)
 	if err != nil {
 		switch err.Error() {
-		case "username already registered":
+		case "username already registered", "username already taken", "email already registered":
 			return echo.NewHTTPError(http.StatusConflict, err.Error())
 		default:
 			return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
@@ -38,6 +48,16 @@ func (h *AuthHandler) Register(c echo.Context) error {
 	return c.JSON(http.StatusCreated, response)
 }
 
+// @Summary Login with username and password
+// @Tags Auth
+// @Accept json
+// @Produce json
+// @Param request body dto.LoginRequest true "User login request"
+// @Success 200 {object} dto.AuthResponse
+// @Failure 400 {object} map[string]interface{}
+// @Failure 401 {object} map[string]interface{}
+// @Failure 500 {object} map[string]interface{}
+// @Router /auth/login [post]
 func (h *AuthHandler) Login(c echo.Context) error {
 	var req dto.LoginRequest
 	if err := c.Bind(&req); err != nil {

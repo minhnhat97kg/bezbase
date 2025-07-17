@@ -23,13 +23,16 @@ func NewRBACHandler(rbacService *services.RBACService) *RBACHandler {
 
 // @Summary Create a new role
 // @Tags RBAC
+// @Security BearerAuth
 // @Accept json
 // @Produce json
 // @Param request body dto.CreateRoleRequest true "Role creation request"
 // @Success 200 {object} dto.RoleResponse
 // @Failure 400 {object} map[string]interface{}
+// @Failure 401 {object} map[string]interface{}
+// @Failure 403 {object} map[string]interface{}
 // @Failure 500 {object} map[string]interface{}
-// @Router /api/v1/rbac/roles [post]
+// @Router /v1/rbac/roles [post]
 func (h *RBACHandler) CreateRole(c echo.Context) error {
 	var req dto.CreateRoleRequest
 	if err := c.Bind(&req); err != nil {
@@ -46,6 +49,7 @@ func (h *RBACHandler) CreateRole(c echo.Context) error {
 
 // @Summary List all roles with pagination
 // @Tags RBAC
+// @Security BearerAuth
 // @Produce json
 // @Param page query int false "Page number (default: 1)"
 // @Param page_size query int false "Page size (default: 10, max: 100)"
@@ -56,8 +60,10 @@ func (h *RBACHandler) CreateRole(c echo.Context) error {
 // @Param order query string false "Sort order (asc, desc)"
 // @Success 200 {object} dto.RolesListResponse
 // @Failure 400 {object} map[string]interface{}
+// @Failure 401 {object} map[string]interface{}
+// @Failure 403 {object} map[string]interface{}
 // @Failure 500 {object} map[string]interface{}
-// @Router /api/v1/rbac/roles [get]
+// @Router /v1/rbac/roles [get]
 func (h *RBACHandler) GetRoles(c echo.Context) error {
 	// Parse pagination parameters
 	var pagination dto.PaginationParams
@@ -98,12 +104,16 @@ func (h *RBACHandler) GetRoles(c echo.Context) error {
 
 // @Summary Get role by ID
 // @Tags RBAC
+// @Security BearerAuth
+// @Produce json
 // @Param role_id path string true "Role ID"
 // @Success 200 {object} dto.RoleResponse
 // @Failure 400 {object} map[string]interface{}
+// @Failure 401 {object} map[string]interface{}
+// @Failure 403 {object} map[string]interface{}
 // @Failure 404 {object} map[string]interface{}
 // @Failure 500 {object} map[string]interface{}
-// @Router /api/v1/rbac/roles/{role_id} [get]
+// @Router /v1/rbac/roles/{role_id} [get]
 func (h *RBACHandler) GetRole(c echo.Context) error {
 	roleIDStr := c.Param("role_id")
 	roleID, err := strconv.ParseUint(roleIDStr, 10, 32)
@@ -121,15 +131,18 @@ func (h *RBACHandler) GetRole(c echo.Context) error {
 
 // @Summary Update a role
 // @Tags RBAC
+// @Security BearerAuth
 // @Accept json
 // @Produce json
 // @Param role_id path string true "Role ID"
 // @Param request body dto.UpdateRoleRequest true "Role update request"
 // @Success 200 {object} dto.RoleResponse
 // @Failure 400 {object} map[string]interface{}
+// @Failure 401 {object} map[string]interface{}
+// @Failure 403 {object} map[string]interface{}
 // @Failure 404 {object} map[string]interface{}
 // @Failure 500 {object} map[string]interface{}
-// @Router /api/v1/rbac/roles/{role_id} [put]
+// @Router /v1/rbac/roles/{role_id} [put]
 func (h *RBACHandler) UpdateRole(c echo.Context) error {
 	roleIDStr := c.Param("role_id")
 	roleID, err := strconv.ParseUint(roleIDStr, 10, 32)
@@ -152,11 +165,15 @@ func (h *RBACHandler) UpdateRole(c echo.Context) error {
 
 // @Summary Delete a role
 // @Tags RBAC
+// @Security BearerAuth
+// @Produce json
 // @Param role path string true "Role name"
 // @Success 200 {object} map[string]interface{}
 // @Failure 400 {object} map[string]interface{}
+// @Failure 401 {object} map[string]interface{}
+// @Failure 403 {object} map[string]interface{}
 // @Failure 500 {object} map[string]interface{}
-// @Router /api/v1/rbac/roles/{role} [delete]
+// @Router /v1/rbac/roles/{role} [delete]
 func (h *RBACHandler) DeleteRole(c echo.Context) error {
 	role := c.Param("role")
 	if role == "" {
@@ -175,13 +192,16 @@ func (h *RBACHandler) DeleteRole(c echo.Context) error {
 
 // @Summary Assign role to user
 // @Tags RBAC
+// @Security BearerAuth
 // @Accept json
 // @Produce json
-// @Param request body AssignRoleRequest true "Role assignment request"
+// @Param request body dto.AssignRoleRequest true "Role assignment request"
 // @Success 200 {object} map[string]interface{}
 // @Failure 400 {object} map[string]interface{}
+// @Failure 401 {object} map[string]interface{}
+// @Failure 403 {object} map[string]interface{}
 // @Failure 500 {object} map[string]interface{}
-// @Router /api/v1/rbac/users/assign-role [post]
+// @Router /v1/rbac/users/assign-role [post]
 func (h *RBACHandler) AssignRole(c echo.Context) error {
 	var req dto.AssignRoleRequest
 	if err := c.Bind(&req); err != nil {
@@ -201,13 +221,16 @@ func (h *RBACHandler) AssignRole(c echo.Context) error {
 
 // @Summary Remove role from user
 // @Tags RBAC
+// @Security BearerAuth
 // @Accept json
 // @Produce json
-// @Param request body AssignRoleRequest true "Role removal request"
+// @Param request body dto.AssignRoleRequest true "Role removal request"
 // @Success 200 {object} map[string]interface{}
 // @Failure 400 {object} map[string]interface{}
+// @Failure 401 {object} map[string]interface{}
+// @Failure 403 {object} map[string]interface{}
 // @Failure 500 {object} map[string]interface{}
-// @Router /api/v1/rbac/users/remove-role [post]
+// @Router /v1/rbac/users/remove-role [post]
 func (h *RBACHandler) RemoveRole(c echo.Context) error {
 	var req dto.AssignRoleRequest
 	if err := c.Bind(&req); err != nil {
@@ -227,11 +250,15 @@ func (h *RBACHandler) RemoveRole(c echo.Context) error {
 
 // @Summary Get user roles
 // @Tags RBAC
+// @Security BearerAuth
+// @Produce json
 // @Param user_id path string true "User ID"
 // @Success 200 {object} map[string]interface{}
 // @Failure 400 {object} map[string]interface{}
+// @Failure 401 {object} map[string]interface{}
+// @Failure 403 {object} map[string]interface{}
 // @Failure 500 {object} map[string]interface{}
-// @Router /api/v1/rbac/users/{user_id}/roles [get]
+// @Router /v1/rbac/users/{user_id}/roles [get]
 func (h *RBACHandler) GetUserRoles(c echo.Context) error {
 	userIDStr := c.Param("user_id")
 	userID, err := strconv.ParseUint(userIDStr, 10, 32)
@@ -252,11 +279,15 @@ func (h *RBACHandler) GetUserRoles(c echo.Context) error {
 
 // @Summary Get users with specific role
 // @Tags RBAC
+// @Security BearerAuth
+// @Produce json
 // @Param role path string true "Role name"
 // @Success 200 {object} map[string]interface{}
 // @Failure 400 {object} map[string]interface{}
+// @Failure 401 {object} map[string]interface{}
+// @Failure 403 {object} map[string]interface{}
 // @Failure 500 {object} map[string]interface{}
-// @Router /api/v1/rbac/roles/{role}/users [get]
+// @Router /v1/rbac/roles/{role}/users [get]
 func (h *RBACHandler) GetUsersWithRole(c echo.Context) error {
 	role := c.Param("role")
 	if role == "" {
@@ -276,6 +307,7 @@ func (h *RBACHandler) GetUsersWithRole(c echo.Context) error {
 
 // @Summary List all permissions with pagination
 // @Tags RBAC
+// @Security BearerAuth
 // @Produce json
 // @Param page query int false "Page number (default: 1)"
 // @Param page_size query int false "Page size (default: 10, max: 100)"
@@ -284,10 +316,12 @@ func (h *RBACHandler) GetUsersWithRole(c echo.Context) error {
 // @Param action query string false "Filter by action"
 // @Param sort query string false "Sort field (role, resource, action)"
 // @Param order query string false "Sort order (asc, desc)"
-// @Success 200 {object} PermissionsListResponse
+// @Success 200 {object} dto.PermissionsListResponse
 // @Failure 400 {object} map[string]interface{}
+// @Failure 401 {object} map[string]interface{}
+// @Failure 403 {object} map[string]interface{}
 // @Failure 500 {object} map[string]interface{}
-// @Router /api/v1/rbac/permissions [get]
+// @Router /v1/rbac/permissions [get]
 func (h *RBACHandler) GetPermissions(c echo.Context) error {
 	// Parse pagination parameters
 	var pagination dto.PaginationParams
@@ -320,13 +354,16 @@ func (h *RBACHandler) GetPermissions(c echo.Context) error {
 
 // @Summary Add permission to role
 // @Tags RBAC
+// @Security BearerAuth
 // @Accept json
 // @Produce json
-// @Param request body PermissionRequest true "Permission request"
+// @Param request body dto.PermissionRequest true "Permission request"
 // @Success 200 {object} map[string]interface{}
 // @Failure 400 {object} map[string]interface{}
+// @Failure 401 {object} map[string]interface{}
+// @Failure 403 {object} map[string]interface{}
 // @Failure 500 {object} map[string]interface{}
-// @Router /api/v1/rbac/permissions [post]
+// @Router /v1/rbac/permissions [post]
 func (h *RBACHandler) AddPermission(c echo.Context) error {
 	var req dto.PermissionRequest
 	if err := c.Bind(&req); err != nil {
@@ -347,13 +384,16 @@ func (h *RBACHandler) AddPermission(c echo.Context) error {
 
 // @Summary Remove permission from role
 // @Tags RBAC
+// @Security BearerAuth
 // @Accept json
 // @Produce json
-// @Param request body PermissionRequest true "Permission request"
+// @Param request body dto.PermissionRequest true "Permission request"
 // @Success 200 {object} map[string]interface{}
 // @Failure 400 {object} map[string]interface{}
+// @Failure 401 {object} map[string]interface{}
+// @Failure 403 {object} map[string]interface{}
 // @Failure 500 {object} map[string]interface{}
-// @Router /api/v1/rbac/permissions [delete]
+// @Router /v1/rbac/permissions [delete]
 func (h *RBACHandler) RemovePermission(c echo.Context) error {
 	var req dto.PermissionRequest
 	if err := c.Bind(&req); err != nil {
@@ -374,11 +414,15 @@ func (h *RBACHandler) RemovePermission(c echo.Context) error {
 
 // @Summary Get permissions for role
 // @Tags RBAC
+// @Security BearerAuth
+// @Produce json
 // @Param role path string true "Role name"
 // @Success 200 {object} map[string]interface{}
 // @Failure 400 {object} map[string]interface{}
+// @Failure 401 {object} map[string]interface{}
+// @Failure 403 {object} map[string]interface{}
 // @Failure 500 {object} map[string]interface{}
-// @Router /api/v1/rbac/roles/{role}/permissions [get]
+// @Router /v1/rbac/roles/{role}/permissions [get]
 func (h *RBACHandler) GetRolePermissions(c echo.Context) error {
 	role := c.Param("role")
 	if role == "" {
@@ -398,13 +442,17 @@ func (h *RBACHandler) GetRolePermissions(c echo.Context) error {
 
 // @Summary Check user permission
 // @Tags RBAC
+// @Security BearerAuth
+// @Produce json
 // @Param user_id path string true "User ID"
 // @Param resource query string true "Resource name"
 // @Param action query string true "Action name"
 // @Success 200 {object} map[string]interface{}
 // @Failure 400 {object} map[string]interface{}
+// @Failure 401 {object} map[string]interface{}
+// @Failure 403 {object} map[string]interface{}
 // @Failure 500 {object} map[string]interface{}
-// @Router /api/v1/rbac/users/{user_id}/check-permission [get]
+// @Router /v1/rbac/users/{user_id}/check-permission [get]
 func (h *RBACHandler) CheckPermission(c echo.Context) error {
 	userIDStr := c.Param("user_id")
 	userID, err := strconv.ParseUint(userIDStr, 10, 32)
@@ -434,14 +482,17 @@ func (h *RBACHandler) CheckPermission(c echo.Context) error {
 
 // @Summary Get paginated list of resources
 // @Tags RBAC
+// @Security BearerAuth
 // @Produce json
 // @Param page query int false "Page number" default(1)
 // @Param page_size query int false "Page size" default(10)
 // @Param search query string false "Search term"
 // @Success 200 {object} dto.PaginatedResourceResponse
 // @Failure 400 {object} map[string]interface{}
+// @Failure 401 {object} map[string]interface{}
+// @Failure 403 {object} map[string]interface{}
 // @Failure 500 {object} map[string]interface{}
-// @Router /api/v1/rbac/resources [get]
+// @Router /v1/rbac/resources [get]
 func (h *RBACHandler) GetResources(c echo.Context) error {
 	pagination := dto.ParsePagination(c)
 	search := c.QueryParam("search")
@@ -494,14 +545,17 @@ func (h *RBACHandler) GetResources(c echo.Context) error {
 
 // @Summary Get paginated list of actions
 // @Tags RBAC
+// @Security BearerAuth
 // @Produce json
 // @Param page query int false "Page number" default(1)
 // @Param page_size query int false "Page size" default(10)
 // @Param search query string false "Search term"
 // @Success 200 {object} dto.PaginatedActionResponse
 // @Failure 400 {object} map[string]interface{}
+// @Failure 401 {object} map[string]interface{}
+// @Failure 403 {object} map[string]interface{}
 // @Failure 500 {object} map[string]interface{}
-// @Router /api/v1/rbac/actions [get]
+// @Router /v1/rbac/actions [get]
 func (h *RBACHandler) GetActions(c echo.Context) error {
 	pagination := dto.ParsePagination(c)
 	search := c.QueryParam("search")

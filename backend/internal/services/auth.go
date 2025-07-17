@@ -7,24 +7,37 @@ import (
 	"bezbase/internal/dto"
 	"bezbase/internal/models"
 	"bezbase/internal/pkg/auth"
+	"bezbase/internal/repository"
 
 	"gorm.io/gorm"
 )
 
 type AuthService struct {
-	db        *gorm.DB
-	jwtSecret string
+	userRepo         repository.UserRepository
+	userInfoRepo     repository.UserInfoRepository
+	authProviderRepo repository.AuthProviderRepository
+	jwtSecret        string
+	db               *gorm.DB
 }
 
-func NewAuthService(db *gorm.DB, jwtSecret string) *AuthService {
+func NewAuthService(
+	userRepo repository.UserRepository,
+	userInfoRepo repository.UserInfoRepository,
+	authProviderRepo repository.AuthProviderRepository,
+	jwtSecret string,
+	db *gorm.DB,
+) *AuthService {
 	return &AuthService{
-		db:        db,
-		jwtSecret: jwtSecret,
+		userRepo:         userRepo,
+		userInfoRepo:     userInfoRepo,
+		authProviderRepo: authProviderRepo,
+		jwtSecret:        jwtSecret,
+		db:               db,
 	}
 }
 
-// RegisterWithEmail creates a new user with email/password authentication
-func (s *AuthService) RegisterWithEmail(req dto.RegisterRequest) (*dto.AuthResponse, error) {
+// Register creates a new user with email/password authentication
+func (s *AuthService) Register(req dto.RegisterRequest) (*dto.AuthResponse, error) {
 	tx := s.db.Begin()
 	defer func() {
 		if r := recover(); r != nil {
@@ -32,9 +45,22 @@ func (s *AuthService) RegisterWithEmail(req dto.RegisterRequest) (*dto.AuthRespo
 		}
 	}()
 
-	// Check if username is already registered
+	// Check if username is already taken
+	var existingUserInfo models.UserInfo
+	if err := tx.Where("username = ?", req.Username).First(&existingUserInfo).Error; err == nil {
+		tx.Rollback()
+		return nil, errors.New("username already taken")
+	}
+
+	// Check if email is already registered
+	if err := tx.Where("email = ?", req.Email).First(&existingUserInfo).Error; err == nil {
+		tx.Rollback()
+		return nil, errors.New("email already registered")
+	}
+
+	// Check if username is already registered in auth providers
 	var existingProvider models.AuthProvider
-	if err := tx.Where("user_name = ? AND provider = ?", req.Email, models.ProviderEmail).First(&existingProvider).Error; err == nil {
+	if err := tx.Where("user_name = ? AND provider = ?", req.Username, models.ProviderEmail).First(&existingProvider).Error; err == nil {
 		tx.Rollback()
 		return nil, errors.New("username already registered")
 	}
@@ -59,6 +85,7 @@ func (s *AuthService) RegisterWithEmail(req dto.RegisterRequest) (*dto.AuthRespo
 	// Create user info
 	userInfo := models.UserInfo{
 		UserID:    user.ID,
+		Username:  req.Username,
 		FirstName: req.FirstName,
 		LastName:  req.LastName,
 		Email:     req.Email,
@@ -75,7 +102,7 @@ func (s *AuthService) RegisterWithEmail(req dto.RegisterRequest) (*dto.AuthRespo
 		UserID:     user.ID,
 		Provider:   models.ProviderEmail,
 		ProviderID: req.Email, // For email provider, provider_id is the email
-		UserName:   req.Email,
+		UserName:   req.Username, // Use username for login
 		Password:   hashedPassword,
 		Verified:   false,
 	}
@@ -93,7 +120,7 @@ func (s *AuthService) RegisterWithEmail(req dto.RegisterRequest) (*dto.AuthRespo
 	user.UserInfo = &userInfo
 
 	// Generate JWT token
-	token, err := auth.GenerateToken(user.ID, user.UserInfo.Email, s.jwtSecret)
+	token, err := auth.GenerateToken(user.ID, user.UserInfo.Username, s.jwtSecret)
 	if err != nil {
 		return nil, errors.New("failed to generate token")
 	}
@@ -129,7 +156,7 @@ func (s *AuthService) LoginWithUsername(req dto.LoginRequest) (*dto.AuthResponse
 	s.db.Save(&user)
 
 	// Generate JWT token
-	token, err := auth.GenerateToken(user.ID, user.UserInfo.Email, s.jwtSecret)
+	token, err := auth.GenerateToken(user.ID, user.UserInfo.Username, s.jwtSecret)
 	if err != nil {
 		return nil, errors.New("failed to generate token")
 	}
@@ -203,7 +230,7 @@ func (s *AuthService) RegisterWithSocialProvider(provider models.AuthProviderTyp
 	user.UserInfo = &userInfo
 
 	// Generate JWT token
-	token, err := auth.GenerateToken(user.ID, email, s.jwtSecret)
+	token, err := auth.GenerateToken(user.ID, user.UserInfo.Username, s.jwtSecret)
 	if err != nil {
 		return nil, errors.New("failed to generate token")
 	}

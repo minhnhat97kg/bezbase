@@ -164,6 +164,26 @@ func GetMigrations() []*gormigrate.Migration {
 				return tx.Migrator().DropTable("roles")
 			},
 		},
+		// {
+		// 	ID: "20250717_001_add_username_to_user_info",
+		// 	Migrate: func(tx *gorm.DB) error {
+		// 		// Add username column to user_info table
+		// 		if err := tx.Exec("ALTER TABLE user_info ADD COLUMN username VARCHAR(255) NOT NULL DEFAULT ''").Error; err != nil {
+		// 			return err
+		// 		}
+		//
+		// 		// Create unique index on username
+		// 		if err := tx.Exec("CREATE UNIQUE INDEX idx_user_info_username ON user_info(username)").Error; err != nil {
+		// 			return err
+		// 		}
+		//
+		// 		return nil
+		// 	},
+		// 	Rollback: func(tx *gorm.DB) error {
+		// 		// Drop the username column
+		// 		return tx.Exec("ALTER TABLE user_info DROP COLUMN username").Error
+		// 	},
+		// },
 	}
 }
 

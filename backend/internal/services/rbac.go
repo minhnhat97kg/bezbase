@@ -7,6 +7,7 @@ import (
 
 	"bezbase/internal/dto"
 	"bezbase/internal/models"
+	"bezbase/internal/repository"
 
 	"github.com/casbin/casbin/v2"
 	"github.com/casbin/casbin/v2/model"
@@ -15,8 +16,10 @@ import (
 )
 
 type RBACService struct {
-	enforcer *casbin.Enforcer
-	db       *gorm.DB
+	enforcer   *casbin.Enforcer
+	roleRepo   repository.RoleRepository
+	ruleRepo   repository.RuleRepository
+	db         *gorm.DB
 }
 
 // GetPermissionsForUser returns all permissions for a user (resource, action)
@@ -55,7 +58,11 @@ func (r *RBACService) GetPermissionsForUser(userID uint) ([]string, error) {
 	return result, nil
 }
 
-func NewRBACService(db *gorm.DB) (*RBACService, error) {
+func NewRBACService(
+	roleRepo repository.RoleRepository,
+	ruleRepo repository.RuleRepository,
+	db *gorm.DB,
+) (*RBACService, error) {
 	adapter, err := gormadapter.NewAdapterByDBUseTableName(db, "", "rules")
 	if err != nil {
 		return nil, fmt.Errorf("failed to create casbin adapter: %w", err)
@@ -80,6 +87,8 @@ func NewRBACService(db *gorm.DB) (*RBACService, error) {
 
 	rbacService := &RBACService{
 		enforcer: enforcer,
+		roleRepo: roleRepo,
+		ruleRepo: ruleRepo,
 		db:       db,
 	}
 
@@ -112,8 +121,8 @@ m = g(r.sub, p.sub) && (r.obj == p.obj || p.obj == "*") && (r.act == p.act || p.
 func (r *RBACService) initializeDefaultRoles() error {
 	// Default roles are now created via migration
 	// Just ensure the permissions are set up for existing roles
-	var roles []models.Role
-	if err := r.db.Find(&roles).Error; err != nil {
+	roles, err := r.roleRepo.GetAll()
+	if err != nil {
 		return err
 	}
 
@@ -190,8 +199,7 @@ func (r *RBACService) AddRole(role string) error {
 
 func (r *RBACService) CreateRole(req dto.CreateRoleRequest) (*models.Role, error) {
 	// Check if role already exists
-	var existingRole models.Role
-	if err := r.db.Where("name = ?", req.Name).First(&existingRole).Error; err == nil {
+	if _, err := r.roleRepo.GetByName(req.Name); err == nil {
 		return nil, fmt.Errorf("role with name '%s' already exists", req.Name)
 	}
 
@@ -211,7 +219,7 @@ func (r *RBACService) CreateRole(req dto.CreateRoleRequest) (*models.Role, error
 		return nil, fmt.Errorf("validation failed: %w", err)
 	}
 
-	if err := r.db.Create(&role).Error; err != nil {
+	if err := r.roleRepo.Create(&role); err != nil {
 		return nil, fmt.Errorf("failed to create role: %w", err)
 	}
 
@@ -219,8 +227,8 @@ func (r *RBACService) CreateRole(req dto.CreateRoleRequest) (*models.Role, error
 }
 
 func (r *RBACService) UpdateRole(id uint, req dto.UpdateRoleRequest) (*models.Role, error) {
-	var role models.Role
-	if err := r.db.First(&role, id).Error; err != nil {
+	role, err := r.roleRepo.GetByID(id)
+	if err != nil {
 		return nil, fmt.Errorf("role not found: %w", err)
 	}
 
@@ -242,11 +250,11 @@ func (r *RBACService) UpdateRole(id uint, req dto.UpdateRoleRequest) (*models.Ro
 		return nil, fmt.Errorf("validation failed: %w", err)
 	}
 
-	if err := r.db.Save(&role).Error; err != nil {
+	if err := r.roleRepo.Update(role); err != nil {
 		return nil, fmt.Errorf("failed to update role: %w", err)
 	}
 
-	return &role, nil
+	return role, nil
 }
 
 func (r *RBACService) GetRoleByName(name string) (*models.Role, error) {

@@ -5,6 +5,7 @@ import Icon from '../components/common/Icons';
 
 const Register = () => {
   const [formData, setFormData] = useState({
+    username: '',
     email: '',
     password: '',
     first_name: '',
@@ -94,6 +95,26 @@ const Register = () => {
             </div>
             
             <div>
+              <label htmlFor="username" className="block text-sm font-medium text-gray-700 mb-2">
+                Username
+              </label>
+              <input
+                type="text"
+                id="username"
+                name="username"
+                value={formData.username}
+                onChange={handleChange}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors"
+                placeholder="Choose a username"
+                required
+                minLength={3}
+                maxLength={30}
+                pattern="[a-zA-Z0-9_]+"
+                title="Username can only contain letters, numbers, and underscores"
+              />
+            </div>
+            
+            <div>
               <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
                 Email Address
               </label>
@@ -120,9 +141,9 @@ const Register = () => {
                 value={formData.password}
                 onChange={handleChange}
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors"
-                placeholder="Enter password (min. 6 characters)"
+                placeholder="Enter password (min. 8 characters)"
                 required
-                minLength={6}
+                minLength={8}
               />
             </div>
             

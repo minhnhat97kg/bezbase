@@ -7,6 +7,7 @@ import UserRoleAssignment from '../components/rbac/UserRoleAssignment';
 import ResourcesList from '../components/rbac/ResourcesList';
 import ActionsList from '../components/rbac/ActionsList';
 import Icon from '../components/common/Icons';
+import TabLayout from '../components/common/TabLayout';
 
 const RoleManagement = () => {
   // Set page title
@@ -131,68 +132,34 @@ const RoleManagement = () => {
     { id: 'actions', name: 'Actions', icon: 'star' },
   ];
 
-  const getTabIcon = (iconName) => {
-    const icons = {
-      shield: <Icon name="shield" />,
-      key: <Icon name="key" />,
-      users: <Icon name="users" />,
-      settings: <Icon name="settings" />,
-      star: <Icon name="star" />,
-    };
-    return icons[iconName];
-  };
-
   if (loading) {
     return (
       <div className="flex justify-center items-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
       </div>
     );
   }
 
   return (
-    <div className="max-w-7xl mx-auto">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Role Management</h1>
-        <p className="mt-2 text-gray-600 dark:text-gray-400">
-          Manage roles, permissions, and user assignments
-        </p>
-      </div>
-
-      {error && (
-        <div className="mb-6 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-md">
-          {error}
-        </div>
-      )}
-
-      {/* Tab Navigation */}
-      <div className="mb-6 border-b border-gray-200 dark:border-gray-700">
-        <nav className="-mb-px flex space-x-8">
-          {tabs.map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`py-2 px-1 border-b-2 font-medium text-sm flex items-center space-x-2 ${activeTab === tab.id
-                ? 'border-blue-500 text-blue-600 dark:text-blue-400'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
-                }`}
-            >
-              {getTabIcon(tab.icon)}
-              <span>{tab.name}</span>
-            </button>
-          ))}
-        </nav>
-      </div>
-
-      {/* Tab Content */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
+    <>
+    <TabLayout
+      title="Role Management"
+      subtitle="Manage roles, permissions, and user assignments"
+      showTabs={true}
+      tabs={tabs}
+      activeTab={activeTab}
+      onTabChange={setActiveTab}
+      error={error}
+      onErrorDismiss={() => setError('')}
+      className="max-w-7xl mx-auto"
+    >
         {activeTab === 'roles' && (
-          <div className="p-6">
+          <div>
             <div className="flex justify-between items-center mb-6">
-              <h2 className="text-lg font-medium text-gray-900 dark:text-white">Roles</h2>
+              <h2 className="text-lg font-medium text-gray-900">Roles</h2>
               <button
                 onClick={handleCreateRole}
-                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium"
+                className="bg-primary-600 hover:bg-primary-700 text-white px-4 py-2 rounded-md text-sm font-medium"
               >
                 Create Role
               </button>
@@ -207,14 +174,14 @@ const RoleManagement = () => {
                     placeholder="Search roles..."
                     value={filters.search}
                     onChange={(e) => handleFilterChange('search', e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors"
                   />
                 </div>
                 <div className="flex gap-2">
                   <select
                     value={filters.status}
                     onChange={(e) => handleFilterChange('status', e.target.value)}
-                    className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white"
+                    className="px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors"
                   >
                     <option value="">All Status</option>
                     <option value="active">Active</option>
@@ -223,7 +190,7 @@ const RoleManagement = () => {
                   <select
                     value={filters.is_system}
                     onChange={(e) => handleFilterChange('is_system', e.target.value)}
-                    className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white"
+                    className="px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors"
                   >
                     <option value="">All Types</option>
                     <option value="true">System</option>
@@ -249,43 +216,43 @@ const RoleManagement = () => {
         )}
 
         {activeTab === 'permissions' && (
-          <div className="p-6">
-            <h2 className="text-lg font-medium text-gray-900 dark:text-white mb-6">Permission Management</h2>
+          <div>
+            <h2 className="text-lg font-medium text-gray-900 mb-6">Permission Management</h2>
             <PermissionManager roles={roles} onRefresh={fetchRoles} />
           </div>
         )}
 
         {activeTab === 'assignments' && (
-          <div className="p-6">
-            <h2 className="text-lg font-medium text-gray-900 dark:text-white mb-6">User Role Assignments</h2>
+          <div>
+            <h2 className="text-lg font-medium text-gray-900 mb-6">User Role Assignments</h2>
             <UserRoleAssignment roles={roles} onRefresh={fetchRoles} />
           </div>
         )}
 
         {activeTab === 'resources' && (
-          <div className="p-6">
-            <h2 className="text-lg font-medium text-gray-900 dark:text-white mb-6">Resource Management</h2>
+          <div>
+            <h2 className="text-lg font-medium text-gray-900 mb-6">Resource Management</h2>
             <ResourcesList />
           </div>
         )}
 
         {activeTab === 'actions' && (
-          <div className="p-6">
-            <h2 className="text-lg font-medium text-gray-900 dark:text-white mb-6">Action Management</h2>
+          <div>
+            <h2 className="text-lg font-medium text-gray-900 mb-6">Action Management</h2>
             <ActionsList />
           </div>
         )}
-      </div>
+    </TabLayout>
 
-      {/* Role Form Modal */}
-      {showForm && (
-        <RoleForm
-          role={selectedRole}
-          onClose={handleFormClose}
-          onSuccess={handleFormSuccess}
-        />
-      )}
-    </div>
+    {/* Role Form Modal */}
+    {showForm && (
+      <RoleForm
+        role={selectedRole}
+        onClose={handleFormClose}
+        onSuccess={handleFormSuccess}
+      />
+    )}
+    </>
   );
 };
 

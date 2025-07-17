@@ -7,14 +7,27 @@ import (
 )
 
 type UpdateProfileRequest struct {
+	Username  string `json:"username"`
 	FirstName string `json:"first_name"`
 	LastName  string `json:"last_name"`
+	Email     string `json:"email"`
 	AvatarURL string `json:"avatar_url"`
 	Language  string `json:"language"`
 	Timezone  string `json:"timezone"`
+	Bio       string `json:"bio"`
+	Location  string `json:"location"`
+	Website   string `json:"website"`
+	Phone     string `json:"phone"`
+}
+
+type ChangePasswordRequest struct {
+	CurrentPassword string `json:"current_password" binding:"required"`
+	NewPassword     string `json:"new_password" binding:"required,min=8"`
+	ConfirmPassword string `json:"confirm_password" binding:"required"`
 }
 
 type CreateUserRequest struct {
+	Username  string `json:"username" binding:"required,min=3,max=30"`
 	FirstName string `json:"first_name" binding:"required"`
 	LastName  string `json:"last_name" binding:"required"`
 	Email     string `json:"email" binding:"required,email"`
@@ -29,6 +42,7 @@ type CreateUserRequest struct {
 }
 
 type UpdateUserRequest struct {
+	Username  string `json:"username"`
 	FirstName string `json:"first_name"`
 	LastName  string `json:"last_name"`
 	Email     string `json:"email"`
@@ -48,6 +62,7 @@ type UserResponse struct {
 	LastLoginAt   *time.Time `json:"last_login_at,omitempty"`
 	CreatedAt     time.Time  `json:"created_at"`
 	UpdatedAt     time.Time  `json:"updated_at"`
+	Username      string     `json:"username"`
 	FirstName     string     `json:"first_name"`
 	LastName      string     `json:"last_name"`
 	Email         string     `json:"email"`
@@ -73,6 +88,7 @@ func ToUserResponse(user *models.User) UserResponse {
 	}
 	
 	if user.UserInfo != nil {
+		resp.Username = user.UserInfo.Username
 		resp.FirstName = user.UserInfo.FirstName
 		resp.LastName = user.UserInfo.LastName
 		resp.Email = user.UserInfo.Email

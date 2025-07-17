@@ -3,6 +3,7 @@ import { userService } from '../services/api';
 import Table from '../components/common/Table';
 import Icon from '../components/common/Icons';
 import { useAuth } from '../hooks/useAuth';
+import CommonLayout from '../components/common/CommonLayout';
 
 const UserManagement = () => {
   const { user: currentUser } = useAuth();
@@ -130,10 +131,10 @@ const UserManagement = () => {
 
   const getStatusBadge = (status) => {
     const statusColors = {
-      active: 'bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-100',
-      inactive: 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-100',
-      suspended: 'bg-red-100 text-red-800 dark:bg-red-800 dark:text-red-100',
-      pending: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-800 dark:text-yellow-100'
+      active: 'bg-green-100 text-green-800',
+      inactive: 'bg-gray-100 text-gray-800',
+      suspended: 'bg-red-100 text-red-800',
+      pending: 'bg-yellow-100 text-yellow-800'
     };
 
     return (
@@ -147,8 +148,8 @@ const UserManagement = () => {
     return (
       <span className={`px-2 py-1 text-xs font-medium rounded-full ${
         verified 
-          ? 'bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-100' 
-          : 'bg-red-100 text-red-800 dark:bg-red-800 dark:text-red-100'
+          ? 'bg-green-100 text-green-800' 
+          : 'bg-red-100 text-red-800'
       }`}>
         {verified ? 'Verified' : 'Unverified'}
       </span>
@@ -158,7 +159,7 @@ const UserManagement = () => {
   const getRolesBadges = (roles) => {
     if (!roles || roles.length === 0) {
       return (
-        <span className="px-2 py-1 text-xs font-medium rounded-full bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-100">
+        <span className="px-2 py-1 text-xs font-medium rounded-full bg-gray-100 text-gray-800">
           No roles
         </span>
       );
@@ -169,7 +170,7 @@ const UserManagement = () => {
         {roles.map((role, index) => (
           <span
             key={index}
-            className="px-2 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-800 dark:bg-blue-800 dark:text-blue-100"
+            className="px-2 py-1 text-xs font-medium rounded-full bg-primary-100 text-primary-800"
           >
             {role}
           </span>
@@ -196,16 +197,16 @@ const UserManagement = () => {
       sortable: true,
       render: (value, row) => (
         <div className="flex items-center">
-          <div className="w-8 h-8 bg-gray-300 dark:bg-gray-600 rounded-full flex items-center justify-center mr-3">
-            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+          <div className="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center mr-3">
+            <span className="text-sm font-medium text-gray-700">
               {row.first_name?.[0]}{row.last_name?.[0]}
             </span>
           </div>
           <div>
-            <div className="font-medium text-gray-900 dark:text-white">
+            <div className="font-medium text-gray-900">
               {row.first_name} {row.last_name}
             </div>
-            <div className="text-sm text-gray-500 dark:text-gray-400">{row.email}</div>
+            <div className="text-sm text-gray-500">{row.email}</div>
           </div>
         </div>
       ),
@@ -253,14 +254,14 @@ const UserManagement = () => {
           <div className="flex items-center space-x-2">
             <button
               onClick={() => handleEditUser(row)}
-              className="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300"
+              className="text-primary-600 hover:text-primary-900"
               title="Edit user"
             >
               <Icon name="edit" className="w-4 h-4" />
             </button>
             <button
               onClick={() => handleDeleteUser(row)}
-              className="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300"
+              className="text-red-600 hover:text-red-900"
               title="Delete user"
               disabled={isCurrentUser}
               style={{ opacity: isCurrentUser ? 0.5 : 1 }}
@@ -273,85 +274,76 @@ const UserManagement = () => {
     },
   ];
 
+  const headerActions = (
+    <button
+      onClick={handleCreateUser}
+      className="bg-primary-600 hover:bg-primary-700 text-white px-4 py-2 rounded-md text-sm font-medium flex items-center space-x-2"
+    >
+      <Icon name="plus" className="w-4 h-4" />
+      <span>Create User</span>
+    </button>
+  );
+
   return (
-    <div className="max-w-7xl mx-auto">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-white">User Management</h1>
-        <p className="mt-2 text-gray-600 dark:text-gray-400">
-          Manage user accounts and their information
-        </p>
-      </div>
-
-      {error && (
-        <div className="mb-6 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-md">
-          {error}
-        </div>
-      )}
-
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
-        <div className="p-6">
-          <div className="flex justify-between items-center mb-6">
-            <h2 className="text-lg font-medium text-gray-900 dark:text-white">Users</h2>
-            <button
-              onClick={handleCreateUser}
-              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium flex items-center space-x-2"
-            >
-              <Icon name="plus" className="w-4 h-4" />
-              <span>Create User</span>
-            </button>
-          </div>
-
-          <div className="mb-6">
-            <div className="flex-1 max-w-md">
-              <input
-                type="text"
-                placeholder="Search users..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white"
-              />
-            </div>
-          </div>
-
-          <Table
-            columns={columns}
-            data={getPaginatedUsers()}
-            loading={loading}
-            emptyMessage="No users found"
-            emptyDescription="Get started by creating a new user account"
-            pagination={pagination}
-            onPageChange={handlePageChange}
-            onPageSizeChange={handlePageSizeChange}
+    <>
+    <CommonLayout
+      title="User Management"
+      subtitle="Manage user accounts and their information"
+      headerActions={headerActions}
+      error={error}
+      onErrorDismiss={() => setError('')}
+      className="max-w-7xl mx-auto"
+    >
+      <div className="mb-6">
+        <div className="flex-1 max-w-md">
+          <input
+            type="text"
+            placeholder="Search users..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors"
           />
         </div>
       </div>
 
-      {/* Create User Modal */}
-      {showCreateForm && (
-        <CreateUserModal
-          onClose={handleFormClose}
-          onSuccess={handleFormSuccess}
-        />
-      )}
+      <Table
+        columns={columns}
+        data={getPaginatedUsers()}
+        loading={loading}
+        emptyMessage="No users found"
+        emptyDescription="Get started by creating a new user account"
+        pagination={pagination}
+        onPageChange={handlePageChange}
+        onPageSizeChange={handlePageSizeChange}
+      />
+    </CommonLayout>
 
-      {/* Edit User Modal */}
-      {showEditForm && selectedUser && (
-        <EditUserModal
-          user={selectedUser}
-          onClose={handleFormClose}
-          onSuccess={handleFormSuccess}
-        />
-      )}
+    {/* Create User Modal */}
+    {showCreateForm && (
+      <CreateUserModal
+        onClose={handleFormClose}
+        onSuccess={handleFormSuccess}
+      />
+    )}
 
-      {/* Delete Confirmation Modal */}
-      {showDeleteConfirm && userToDelete && (
-        <DeleteConfirmModal
-          user={userToDelete}
-          onConfirm={handleDeleteConfirm}
-          onCancel={handleDeleteCancel}
-        />
-      )}
-    </div>
+    {/* Edit User Modal */}
+    {showEditForm && selectedUser && (
+      <EditUserModal
+        user={selectedUser}
+        onClose={handleFormClose}
+        onSuccess={handleFormSuccess}
+      />
+    )}
+
+    {/* Delete Confirmation Modal */}
+    {showDeleteConfirm && userToDelete && (
+      <DeleteConfirmModal
+        user={userToDelete}
+        onConfirm={handleDeleteConfirm}
+        onCancel={handleDeleteCancel}
+      />
+    )}
+    </>
   );
 };
 
@@ -425,7 +417,7 @@ const CreateUserModal = ({ onClose, onSuccess }) => {
                   value={formData.first_name}
                   onChange={handleChange}
                   required
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors"
                 />
               </div>
               <div>
@@ -438,7 +430,7 @@ const CreateUserModal = ({ onClose, onSuccess }) => {
                   value={formData.last_name}
                   onChange={handleChange}
                   required
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors"
                 />
               </div>
             </div>
@@ -500,7 +492,7 @@ const CreateUserModal = ({ onClose, onSuccess }) => {
                   name="language"
                   value={formData.language}
                   onChange={handleChange}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors"
                 />
               </div>
               <div>
@@ -512,7 +504,7 @@ const CreateUserModal = ({ onClose, onSuccess }) => {
                   name="timezone"
                   value={formData.timezone}
                   onChange={handleChange}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors"
                 />
               </div>
             </div>
@@ -580,7 +572,7 @@ const CreateUserModal = ({ onClose, onSuccess }) => {
               <button
                 type="submit"
                 disabled={loading}
-                className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50 rounded-md"
+                className="px-4 py-2 text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 disabled:opacity-50 rounded-md"
               >
                 {loading ? 'Creating...' : 'Create User'}
               </button>
@@ -660,7 +652,7 @@ const EditUserModal = ({ user, onClose, onSuccess }) => {
                   name="first_name"
                   value={formData.first_name}
                   onChange={handleChange}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors"
                 />
               </div>
               <div>
@@ -672,7 +664,7 @@ const EditUserModal = ({ user, onClose, onSuccess }) => {
                   name="last_name"
                   value={formData.last_name}
                   onChange={handleChange}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors"
                 />
               </div>
             </div>
@@ -717,7 +709,7 @@ const EditUserModal = ({ user, onClose, onSuccess }) => {
                   name="language"
                   value={formData.language}
                   onChange={handleChange}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors"
                 />
               </div>
               <div>
@@ -729,7 +721,7 @@ const EditUserModal = ({ user, onClose, onSuccess }) => {
                   name="timezone"
                   value={formData.timezone}
                   onChange={handleChange}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors"
                 />
               </div>
             </div>
@@ -797,7 +789,7 @@ const EditUserModal = ({ user, onClose, onSuccess }) => {
               <button
                 type="submit"
                 disabled={loading}
-                className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50 rounded-md"
+                className="px-4 py-2 text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 disabled:opacity-50 rounded-md"
               >
                 {loading ? 'Updating...' : 'Update User'}
               </button>

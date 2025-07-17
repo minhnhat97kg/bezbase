@@ -30,6 +30,7 @@ const ICON_CLASSES = {
   error: 'fas fa-times-circle',
   loading: 'fas fa-spinner',
   success: 'fas fa-check-circle',
+  check: 'fas fa-check',
   warning: 'fas fa-exclamation-triangle',
   exclamation: 'fas fa-exclamation-triangle',
   

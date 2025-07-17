@@ -80,6 +80,9 @@ tmp/
 # Binaries
 main
 app
+backend/main
+backend/migrate-tool
+backend/server.log
 
 # Air
 build-errors.log
