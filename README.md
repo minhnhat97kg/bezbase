@@ -2,17 +2,33 @@
 
 A modern fullstack web application built with Go (Echo framework) backend, React frontend, and PostgreSQL database featuring JWT authentication and comprehensive RBAC (Role-Based Access Control) system.
 
-## 🚀 Features
+## 🚀 Current Features (v1.0)
 
+### Core Features
 - **Backend**: Go with Echo framework and comprehensive API documentation
-- **Frontend**: React with TailwindCSS and responsive design
+- **Frontend**: React with TypeScript, TailwindCSS, and responsive design
 - **Database**: PostgreSQL with GORM ORM and automated migrations
 - **Authentication**: JWT-based authentication with secure token management
 - **Authorization**: Advanced RBAC system with roles, permissions, and resources
+- **Internationalization**: Multi-language support (English, Vietnamese) with i18n
 - **API Documentation**: Interactive Swagger/OpenAPI documentation
 - **Architecture**: Clean separation of handlers, services, and middleware
 - **Containerization**: Docker and Docker Compose for development and production
 - **Development**: Hot reloading for both frontend and backend
+
+### User Management
+- Complete user CRUD operations with status management
+- User profiles with extended information (bio, location, timezone)
+- Role-based access control with fine-grained permissions
+- User authentication with JWT tokens
+- Password management and security
+
+### Developer Experience
+- Comprehensive API documentation with Swagger/OpenAPI
+- Docker containerization for easy deployment
+- Hot reloading for rapid development
+- Makefile for development task automation
+- Clean architecture with proper separation of concerns
 
 ## 📋 Prerequisites
 
@@ -431,18 +447,94 @@ npm run build
 4. Configure reverse proxy (Nginx)
 5. Setup SSL certificates
 
+## 🗺️ Feature Roadmap
+
+BezBase is designed to be a comprehensive foundation for modern web applications. The following features are planned for future releases:
+
+### 🔥 Priority 1: Essential Features (v1.1-1.2)
+- **Enhanced Security**: 2FA, OAuth integration, password reset, email verification
+- **Testing Infrastructure**: Comprehensive unit, integration, and e2e testing
+- **API Enhancements**: Rate limiting, API versioning, enhanced error handling
+
+### 🔮 Priority 2: User Experience (v1.3-1.4)
+- **File Management**: Upload system, media library, cloud storage integration
+- **Notifications**: Real-time notifications, email system, push notifications
+- **Enhanced Profiles**: Extended user profiles, activity logs, profile pictures
+
+### 🌟 Priority 3: Advanced Features (v1.5-1.6)
+- **Content Management**: Blog system, rich text editor, content approval
+- **Communication**: In-app messaging, email templates, notification center
+- **Analytics**: Dashboard analytics, performance monitoring, user insights
+
+### 🚀 Priority 4: Scalability (v1.7-1.8)
+- **Performance**: Redis caching, CDN integration, background job processing
+- **Architecture**: Event-driven design, microservices preparation
+- **Security**: Advanced security headers, audit logging, compliance features
+
+### 🏗️ Priority 5: Enterprise (v2.0+)
+- **Multi-tenancy**: Organization-based isolation, tenant management
+- **Advanced RBAC**: Hierarchical roles, context-based permissions
+- **Compliance**: GDPR compliance, audit systems, data retention
+- **Integrations**: Webhook system, third-party APIs, payment gateways
+
+For detailed feature specifications and implementation guidelines, see [FEATURE_ROADMAP.md](FEATURE_ROADMAP.md).
+
+## 💡 Use Cases
+
+BezBase is perfect for:
+
+### Startups & MVPs
+- **User Management Systems**: Customer portals, admin dashboards
+- **SaaS Applications**: Multi-tenant software with user authentication
+- **Internal Tools**: Employee management, project tracking systems
+
+### Educational Projects
+- **Learning Fullstack Development**: Modern Go + React architecture
+- **Authentication Systems**: JWT and RBAC implementation examples
+- **API Development**: RESTful API design with comprehensive documentation
+
+### Enterprise Applications
+- **Admin Panels**: Role-based administrative interfaces
+- **Customer Portals**: User self-service applications
+- **Internal Applications**: HR systems, project management tools
+
+## 🎯 Why Choose BezBase?
+
+- **Production Ready**: Comprehensive authentication, authorization, and security
+- **Developer Friendly**: Clean architecture, extensive documentation, hot reloading
+- **Scalable**: Designed for growth with microservices-ready architecture
+- **Modern Stack**: Latest versions of Go, React, PostgreSQL, and Docker
+- **International**: Built-in i18n support for global applications
+- **Extensible**: Clean interfaces and patterns for easy feature addition
+
 ## 🤝 Contributing
 
+We welcome contributions! Here's how to get involved:
+
+### Development Process
 1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Add tests if applicable
-5. Update documentation
-6. Submit a pull request
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Make your changes with proper tests
+4. Update documentation as needed
+5. Submit a pull request with detailed description
+
+### Contribution Guidelines
+- Follow the existing code style and patterns
+- Add tests for new features
+- Update documentation for API changes
+- Ensure all tests pass before submitting
+- Reference relevant issues in your PR description
+
+### Areas for Contribution
+- **Feature Development**: Implement features from the roadmap
+- **Testing**: Add unit, integration, and e2e tests
+- **Documentation**: Improve guides and API documentation
+- **Bug Fixes**: Fix reported issues
+- **Performance**: Optimize queries and API responses
 
 ## 📄 License
 
-This project is licensed under the MIT License.
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ## 🐛 Troubleshooting
 

@@ -1,6 +1,10 @@
 import axios, { AxiosResponse } from 'axios';
+import i18n from '../i18n';
 
 const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:8080/api';
+
+// API Configuration - hardcoded to v1
+const API_VERSION = 'v1';
 
 // Type definitions
 interface LoginRequest {
@@ -57,47 +61,148 @@ interface AssignmentData {
   [key: string]: any;
 }
 
-const api = axios.create({
-  baseURL: API_BASE_URL,
-  headers: {
-    'Content-Type': 'application/json',
-  },
-});
+// API Response Types
+interface ApiResponse<T = any> {
+  data: T;
+  success: boolean;
+  message?: string;
+  version?: string;
+  timestamp?: string;
+}
 
-// Request interceptor to add auth token
-api.interceptors.request.use(
-  (config) => {
-    const token = localStorage.getItem('token');
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-    return config;
-  },
-  (error) => {
-    return Promise.reject(error);
-  }
-);
+interface ApiError {
+  error: string;
+  message: string;
+  status_code: number;
+  version?: string;
+  timestamp?: string;
+}
 
-// Response interceptor to handle auth errors
-api.interceptors.response.use(
-  (response) => response,
-  (error) => {
-    if (error.response?.status === 401) {
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
-      window.location.href = '/login';
+interface PaginatedResponse<T = any> {
+  data: T[];
+  pagination: {
+    page: number;
+    page_size: number;
+    total_items: number;
+    total_pages: number;
+    has_next: boolean;
+    has_prev: boolean;
+  };
+  success: boolean;
+  message?: string;
+  version?: string;
+}
+
+// Version-specific response types
+interface VersionedApiResponse<T = any> extends ApiResponse<T> {
+  api_version: string;
+  supported_versions: string[];
+  deprecation_notice?: string;
+}
+
+// Export types for use in components
+export type {
+  LoginRequest,
+  RegisterRequest,
+  UserData,
+  PasswordData,
+  RoleData,
+  PermissionData,
+  RoleQueryParams,
+  AssignmentData,
+  ApiResponse,
+  ApiError,
+  PaginatedResponse,
+  VersionedApiResponse
+};
+
+// Create API instance with language support and hardcoded v1 versioning
+const createApiInstance = (useVersioning: boolean = true) => {
+  const baseURL = useVersioning ? `${API_BASE_URL}/${API_VERSION}` : API_BASE_URL;
+
+  const instance = axios.create({
+    baseURL: baseURL,
+    headers: {
+      'Content-Type': 'application/json',
+    },
+  });
+
+  // Add language headers to all requests
+  instance.interceptors.request.use(
+    (config) => {
+      // Add language headers
+      const currentLanguage = i18n.language || 'en';
+      config.headers['Accept-Language'] = currentLanguage;
+      config.headers['Content-Language'] = currentLanguage;
+      
+      // Add auth token
+      const token = localStorage.getItem('token');
+      if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
+      }
+
+      return config;
+    },
+    (error) => {
+      return Promise.reject(error);
     }
-    return Promise.reject(error);
-  }
-);
+  );
+
+  return instance;
+};
+
+// Create API instances
+const api = createApiInstance(false); // Unversioned for health endpoint
+const apiV1 = createApiInstance(true);  // Versioned for all other endpoints
+
+// Add response interceptor to all API instances
+const addResponseInterceptor = (instance: any) => {
+  instance.interceptors.response.use(
+    (response) => {
+      // Add version info to successful responses
+      if (response.headers['api-version']) {
+        response.data.api_version = response.headers['api-version'];
+      }
+      if (response.headers['api-version-supported']) {
+        response.data.api_version_supported = response.headers['api-version-supported'] === 'true';
+      }
+      return response;
+    },
+    (error) => {
+      // Handle auth errors
+      if (error.response?.status === 401) {
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        window.location.href = '/login';
+      }
+      
+      // Handle API version errors
+      if (error.response?.status === 406) {
+        console.warn('API Version not supported:', error.response.data);
+      }
+      
+      // Handle rate limit errors
+      if (error.response?.status === 429) {
+        console.warn('Rate limit exceeded:', error.response.data);
+        // Could show a toast notification here
+      }
+      
+      return Promise.reject(error);
+    }
+  );
+};
+
+// Apply response interceptor to all instances
+addResponseInterceptor(api);
+addResponseInterceptor(apiV1);
 
 export const authService = {
   login: (username: string, password: string): Promise<AxiosResponse<any>> => {
-    return api.post('/auth/login', { username, password });
+    return apiV1.post('/auth/login', { username, password });
   },
   
   register: (userData: RegisterRequest): Promise<AxiosResponse<any>> => {
-    return api.post('/auth/register', userData);
+    return apiV1.post('/auth/register', userData);
   },
   
   logout: (): void => {
@@ -108,39 +213,39 @@ export const authService = {
 
 export const userService = {
   getPermissions: (): Promise<AxiosResponse<any>> => {
-    return api.get('/v1/me/permissions');
+    return apiV1.get('/me/permissions');
   },
   getProfile: (): Promise<AxiosResponse<any>> => {
-    return api.get('/v1/profile');
+    return apiV1.get('/profile');
   },
   
   updateProfile: (userData: Partial<UserData>): Promise<AxiosResponse<any>> => {
-    return api.put('/v1/profile', userData);
+    return apiV1.put('/profile', userData);
   },
   
   changePassword: (passwordData: PasswordData): Promise<AxiosResponse<any>> => {
-    return api.put('/v1/profile/password', passwordData);
+    return apiV1.put('/profile/password', passwordData);
   },
   
   getUsers: (searchTerm: string = ''): Promise<AxiosResponse<any>> => {
     const params = searchTerm ? { search: searchTerm } : {};
-    return api.get('/v1/users', { params });
+    return apiV1.get('/users', { params });
   },
   
   getUser: (userId: string): Promise<AxiosResponse<any>> => {
-    return api.get(`/v1/users/${userId}`);
+    return apiV1.get(`/users/${userId}`);
   },
   
   createUser: (userData: UserData): Promise<AxiosResponse<any>> => {
-    return api.post('/v1/users', userData);
+    return apiV1.post('/users', userData);
   },
   
   updateUser: (userId: string, userData: Partial<UserData>): Promise<AxiosResponse<any>> => {
-    return api.put(`/v1/users/${userId}`, userData);
+    return apiV1.put(`/users/${userId}`, userData);
   },
   
   deleteUser: (userId: string): Promise<AxiosResponse<any>> => {
-    return api.delete(`/v1/users/${userId}`);
+    return apiV1.delete(`/users/${userId}`);
   },
 };
 
@@ -162,77 +267,77 @@ export const rbacService = {
     if (params.sort) queryParams.append('sort', params.sort);
     if (params.order) queryParams.append('order', params.order);
     
-    const url = queryParams.toString() ? `/v1/rbac/roles?${queryParams.toString()}` : '/v1/rbac/roles';
-    return api.get(url);
+    const url = queryParams.toString() ? `/rbac/roles?${queryParams.toString()}` : '/rbac/roles';
+    return apiV1.get(url);
   },
   
   getRole: (roleId: string): Promise<AxiosResponse<any>> => {
-    return api.get(`/v1/rbac/roles/${roleId}`);
+    return apiV1.get(`/rbac/roles/${roleId}`);
   },
   
   createRole: (roleData: RoleData): Promise<AxiosResponse<any>> => {
-    return api.post('/v1/rbac/roles', roleData);
+    return apiV1.post('/rbac/roles', roleData);
   },
   
   updateRole: (roleId: string, roleData: RoleData): Promise<AxiosResponse<any>> => {
-    return api.put(`/v1/rbac/roles/${roleId}`, roleData);
+    return apiV1.put(`/rbac/roles/${roleId}`, roleData);
   },
   
   deleteRole: (roleName: string): Promise<AxiosResponse<any>> => {
-    return api.delete(`/v1/rbac/roles/${roleName}`);
+    return apiV1.delete(`/rbac/roles/${roleName}`);
   },
   
   // Permission management
   getPermissions: (params = {}) => {
-    return api.get('/v1/rbac/permissions', { params });
+    return apiV1.get('/rbac/permissions', { params });
   },
   
   getAvailablePermissions: () => {
-    return api.get('/v1/rbac/permissions/available');
+    return apiV1.get('/rbac/permissions/available');
   },
   
   getRolePermissions: (roleName) => {
-    return api.get(`/v1/rbac/roles/${roleName}/permissions`);
+    return apiV1.get(`/rbac/roles/${roleName}/permissions`);
   },
   
   addPermission: (permissionData) => {
-    return api.post('/v1/rbac/permissions', permissionData);
+    return apiV1.post('/rbac/permissions', permissionData);
   },
   
   removePermission: (permissionData) => {
-    return api.delete('/v1/rbac/permissions', { data: permissionData });
+    return apiV1.delete('/rbac/permissions', { data: permissionData });
   },
   
   // User role management
   getUserRoles: (userId) => {
-    return api.get(`/v1/rbac/users/${userId}/roles`);
+    return apiV1.get(`/rbac/users/${userId}/roles`);
   },
   
   assignRole: (assignmentData) => {
-    return api.post('/v1/rbac/users/assign-role', assignmentData);
+    return apiV1.post('/rbac/users/assign-role', assignmentData);
   },
   
   removeRole: (removalData) => {
-    return api.post('/v1/rbac/users/remove-role', removalData);
+    return apiV1.post('/rbac/users/remove-role', removalData);
   },
   
   getUsersWithRole: (roleName) => {
-    return api.get(`/v1/rbac/roles/${roleName}/users`);
+    return apiV1.get(`/rbac/roles/${roleName}/users`);
   },
   
   checkPermission: (userId: string, resource: string, action: string): Promise<AxiosResponse<any>> => {
-    return api.get(`/v1/rbac/users/${userId}/check-permission`, {
+    return apiV1.get(`/rbac/users/${userId}/check-permission`, {
       params: { resource, action }
     });
   },
 
   // Resource and action endpoints
   getResources: (params: any = {}): Promise<AxiosResponse<any>> => {
-    return api.get('/v1/rbac/resources', { params });
+    return apiV1.get('/rbac/resources', { params });
   },
 
   getActions: (params: any = {}): Promise<AxiosResponse<any>> => {
-    return api.get('/v1/rbac/actions', { params });
+    return apiV1.get('/rbac/actions', { params });
   },
 
 };

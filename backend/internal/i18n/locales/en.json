@@ -77,7 +77,20 @@
     "failed_to_connect_to_database": "Failed to connect to database",
     "failed_to_get_underlying_sql_db": "Failed to get underlying sql.DB",
     "failed_to_run_migrations": "Failed to run migrations",
-    "failed_to_initialize_rbac_service": "Failed to initialize RBAC service"
+    "failed_to_initialize_rbac_service": "Failed to initialize RBAC service",
+    "email_send_failed": "Failed to send email",
+    "email_invalid_token": "Invalid or expired verification token",
+    "email_verification_failed": "Email verification failed",
+    "email_token_required": "Verification token is required",
+    "email_rate_limited": "Verification email was sent recently, please wait before requesting again",
+    "email_already_verified": "Email is already verified",
+    "password_reset_request_failed": "Failed to send password reset email",
+    "password_invalid_token": "Invalid or expired password reset token",
+    "password_token_expired": "Password reset token is expired or already used",
+    "password_reset_failed": "Failed to reset password",
+    "password_token_required": "Password reset token is required",
+    "password_validation_failed": "Failed to validate password reset token",
+    "password_reset_rate_limited": "Password reset was requested recently, please wait before requesting again"
   },
   "success": {
     "password_changed_successfully": "Password changed successfully",
@@ -86,7 +99,12 @@
     "role_assigned_successfully": "Role assigned successfully",
     "role_removed_successfully": "Role removed successfully",
     "permission_added_successfully": "Permission added successfully",
-    "permission_removed_successfully": "Permission removed successfully"
+    "permission_removed_successfully": "Permission removed successfully",
+    "email_verification_sent": "Verification email sent successfully",
+    "email_verification_success": "Email verified successfully",
+    "password_reset_email_sent": "Password reset email sent successfully",
+    "password_reset_success": "Password reset successfully",
+    "password_token_valid": "Password reset token is valid"
   },
   "status": {
     "healthy": "healthy",

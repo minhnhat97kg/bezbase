@@ -35,6 +35,7 @@ type AuthProviderRepository interface {
 	GetByUserID(ctx contextx.Contextx, userID uint) ([]models.AuthProvider, error)
 	GetByUsernameAndProvider(ctx contextx.Contextx, username string, provider models.AuthProviderType) (*models.AuthProvider, error)
 	GetByProviderIDAndType(ctx contextx.Contextx, providerID string, provider models.AuthProviderType) (*models.AuthProvider, error)
+	GetByUserIDAndProvider(ctx contextx.Contextx, userID uint, provider models.AuthProviderType) (*models.AuthProvider, error)
 	Create(ctx contextx.Contextx, authProvider *models.AuthProvider) error
 	Update(ctx contextx.Contextx, authProvider *models.AuthProvider) error
 	Delete(ctx contextx.Contextx, userID uint) error

@@ -77,7 +77,20 @@
     "failed_to_connect_to_database": "Thất bại khi kết nối cơ sở dữ liệu",
     "failed_to_get_underlying_sql_db": "Thất bại khi lấy sql.DB cơ bản",
     "failed_to_run_migrations": "Thất bại khi chạy migration",
-    "failed_to_initialize_rbac_service": "Thất bại khi khởi tạo dịch vụ RBAC"
+    "failed_to_initialize_rbac_service": "Thất bại khi khởi tạo dịch vụ RBAC",
+    "email_send_failed": "Thất bại khi gửi email",
+    "email_invalid_token": "Token xác thực không hợp lệ hoặc đã hết hạn",
+    "email_verification_failed": "Xác thực email thất bại",
+    "email_token_required": "Token xác thực là bắt buộc",
+    "email_rate_limited": "Email xác thực đã được gửi gần đây, vui lòng chờ trước khi yêu cầu lại",
+    "email_already_verified": "Email đã được xác thực",
+    "password_reset_request_failed": "Thất bại khi gửi email đặt lại mật khẩu",
+    "password_invalid_token": "Token đặt lại mật khẩu không hợp lệ hoặc đã hết hạn",
+    "password_token_expired": "Token đặt lại mật khẩu đã hết hạn hoặc đã được sử dụng",
+    "password_reset_failed": "Thất bại khi đặt lại mật khẩu",
+    "password_token_required": "Token đặt lại mật khẩu là bắt buộc",
+    "password_validation_failed": "Thất bại khi xác thực token đặt lại mật khẩu",
+    "password_reset_rate_limited": "Yêu cầu đặt lại mật khẩu đã được gửi gần đây, vui lòng chờ trước khi yêu cầu lại"
   },
   "success": {
     "password_changed_successfully": "Đổi mật khẩu thành công",
@@ -86,7 +99,12 @@
     "role_assigned_successfully": "Gán vai trò thành công",
     "role_removed_successfully": "Xóa vai trò thành công",
     "permission_added_successfully": "Thêm quyền thành công",
-    "permission_removed_successfully": "Xóa quyền thành công"
+    "permission_removed_successfully": "Xóa quyền thành công",
+    "email_verification_sent": "Gửi email xác thực thành công",
+    "email_verification_success": "Xác thực email thành công",
+    "password_reset_email_sent": "Gửi email đặt lại mật khẩu thành công",
+    "password_reset_success": "Đặt lại mật khẩu thành công",
+    "password_token_valid": "Token đặt lại mật khẩu hợp lệ"
   },
   "status": {
     "healthy": "khỏe mạnh",

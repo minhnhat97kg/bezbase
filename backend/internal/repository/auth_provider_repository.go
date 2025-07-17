@@ -47,6 +47,17 @@ func (r *authProviderRepository) GetByProviderIDAndType(ctx contextx.Contextx, p
 	return &authProvider, nil
 }
 
+func (r *authProviderRepository) GetByUserIDAndProvider(ctx contextx.Contextx, userID uint, provider models.AuthProviderType) (*models.AuthProvider, error) {
+	var authProvider models.AuthProvider
+	if err := ctx.GetTxn(r.db).Where("user_id = ? AND provider = ?", userID, provider).First(&authProvider).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, errors.New("auth provider not found")
+		}
+		return nil, err
+	}
+	return &authProvider, nil
+}
+
 func (r *authProviderRepository) Create(ctx contextx.Contextx, authProvider *models.AuthProvider) error {
 	if err := ctx.GetTxn(r.db).Create(authProvider).Error; err != nil {
 		return errors.New("failed to create auth provider")

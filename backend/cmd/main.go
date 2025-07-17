@@ -59,11 +59,14 @@ func main() {
 	e.Use(echomiddleware.Recover())
 	e.Use(echomiddleware.CORS())
 	e.Use(middleware.I18nMiddleware()) // Add i18n middleware
+	e.Use(middleware.Versioning())    // Add versioning middleware
 
 	// Initialize repositories
 	userRepo := repository.NewUserRepository(db)
 	userInfoRepo := repository.NewUserInfoRepository(db)
 	authProviderRepo := repository.NewAuthProviderRepository(db)
+	emailVerificationRepo := repository.NewEmailVerificationRepository(db)
+	passwordResetRepo := repository.NewPasswordResetRepository(db)
 	roleRepo := repository.NewRoleRepository(db)
 	ruleRepo := repository.NewRuleRepository(db)
 
@@ -72,6 +75,9 @@ func main() {
 	if err != nil {
 		log.Fatal("Failed to initialize RBAC service:", err)
 	}
+	emailService := services.NewEmailService(emailVerificationRepo)
+	emailVerificationService := services.NewEmailVerificationService(userRepo, emailVerificationRepo, emailService)
+	passwordResetService := services.NewPasswordResetService(userRepo, userInfoRepo, authProviderRepo, passwordResetRepo, emailService)
 	authService := services.NewAuthService(userRepo, userInfoRepo, authProviderRepo, cfg.JWTSecret, db)
 	userService := services.NewUserService(userRepo, userInfoRepo, authProviderRepo, rbacService, db)
 
@@ -80,19 +86,37 @@ func main() {
 	rbacHandler := handlers.NewRBACHandler(rbacService)
 	userHandler := handlers.NewUserHandler(userService, rbacService)
 	authHandler := handlers.NewAuthHandler(authService)
+	emailVerificationHandler := handlers.NewEmailVerificationHandler(emailVerificationService)
+	passwordResetHandler := handlers.NewPasswordResetHandler(passwordResetService)
 
 	// Routes
 
 	// Public routes
 	api := e.Group("/api")
 
-	// Auth routes
-	auth := api.Group("/auth")
+	// API v1 routes
+	apiV1 := api.Group("/v1")
+	apiV1.Use(middleware.APIRateLimit()) // Add rate limiting for API endpoints
+
+	// Auth routes (public, but versioned)
+	auth := apiV1.Group("/auth")
+	auth.Use(middleware.AuthRateLimit()) // Add rate limiting for auth endpoints
 	auth.POST("/register", authHandler.Register)
 	auth.POST("/login", authHandler.Login)
+	
+	// Email verification routes (public)
+	auth.POST("/send-verification-email", emailVerificationHandler.SendVerificationEmail)
+	auth.POST("/verify-email", emailVerificationHandler.VerifyEmail)
+	auth.GET("/verify-email", emailVerificationHandler.VerifyEmailByToken)
+	auth.POST("/resend-verification-email", emailVerificationHandler.ResendVerificationEmail)
+	
+	// Password reset routes (public)
+	auth.POST("/request-password-reset", passwordResetHandler.RequestPasswordReset)
+	auth.POST("/reset-password", passwordResetHandler.ResetPassword)
+	auth.POST("/validate-reset-token", passwordResetHandler.ValidateResetToken)
+	auth.GET("/validate-reset-token", passwordResetHandler.ValidateResetTokenByParam)
 
-	// Protected routes
-	apiV1 := api.Group("/v1")
+	// Protected routes (add JWT middleware after auth routes)
 	apiV1.Use(middleware.JWTMiddleware(cfg.JWTSecret))
 
 	// Profile routes (users can access their own profile)
@@ -137,6 +161,12 @@ func main() {
 	rbacGroup.GET("/users/:user_id/check-permission", rbacHandler.CheckPermission)
 
 
+	// API v2 (future version example)
+	apiV2 := api.Group("/v2")
+	apiV2.Use(middleware.APIRateLimit())              // Add rate limiting for API endpoints
+	apiV2.Use(middleware.JWTMiddleware(cfg.JWTSecret))
+	apiV2.Use(middleware.RequireMinVersion(2))        // Require minimum version 2
+	
 	// Health check
 	api.GET("/health", commonHandler.HealthCheck)
 

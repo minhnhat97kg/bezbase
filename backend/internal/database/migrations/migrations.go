@@ -184,6 +184,96 @@ func GetMigrations() []*gormigrate.Migration {
 		// 		return tx.Exec("ALTER TABLE user_info DROP COLUMN username").Error
 		// 	},
 		// },
+		{
+			ID: "20250717_002_add_email_verification_tokens",
+			Migrate: func(tx *gorm.DB) error {
+				// Create EmailVerificationToken table
+				type EmailVerificationToken struct {
+					ID        uint         `gorm:"primaryKey"`
+					UserID    uint         `gorm:"not null;index"`
+					Token     string       `gorm:"not null;uniqueIndex;size:255"`
+					Email     string       `gorm:"not null;size:255"`
+					ExpiresAt interface{}  `gorm:"type:timestamp;not null"`
+					UsedAt    *interface{} `gorm:"type:timestamp"`
+					CreatedAt interface{}  `gorm:"type:timestamp;not null;default:CURRENT_TIMESTAMP"`
+					UpdatedAt interface{}  `gorm:"type:timestamp;not null;default:CURRENT_TIMESTAMP"`
+					DeletedAt *interface{} `gorm:"type:timestamp;index"`
+				}
+
+				if err := tx.AutoMigrate(&EmailVerificationToken{}); err != nil {
+					return err
+				}
+
+				// Add foreign key constraint
+				if err := tx.Exec("ALTER TABLE email_verification_tokens ADD CONSTRAINT fk_email_verification_tokens_user_id FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE").Error; err != nil {
+					return err
+				}
+
+				// Add indexes for performance
+				indexes := []string{
+					"CREATE INDEX IF NOT EXISTS idx_email_verification_tokens_user_id ON email_verification_tokens(user_id)",
+					"CREATE INDEX IF NOT EXISTS idx_email_verification_tokens_token ON email_verification_tokens(token)",
+					"CREATE INDEX IF NOT EXISTS idx_email_verification_tokens_expires_at ON email_verification_tokens(expires_at)",
+					"CREATE INDEX IF NOT EXISTS idx_email_verification_tokens_used_at ON email_verification_tokens(used_at)",
+				}
+
+				for _, query := range indexes {
+					if err := tx.Exec(query).Error; err != nil {
+						return err
+					}
+				}
+
+				return nil
+			},
+			Rollback: func(tx *gorm.DB) error {
+				return tx.Migrator().DropTable("email_verification_tokens")
+			},
+		},
+		{
+			ID: "20250717_003_add_password_reset_tokens",
+			Migrate: func(tx *gorm.DB) error {
+				// Create PasswordResetToken table
+				type PasswordResetToken struct {
+					ID        uint         `gorm:"primaryKey"`
+					UserID    uint         `gorm:"not null;index"`
+					Token     string       `gorm:"not null;uniqueIndex;size:255"`
+					Email     string       `gorm:"not null;size:255"`
+					ExpiresAt interface{}  `gorm:"type:timestamp;not null"`
+					UsedAt    *interface{} `gorm:"type:timestamp"`
+					CreatedAt interface{}  `gorm:"type:timestamp;not null;default:CURRENT_TIMESTAMP"`
+					UpdatedAt interface{}  `gorm:"type:timestamp;not null;default:CURRENT_TIMESTAMP"`
+					DeletedAt *interface{} `gorm:"type:timestamp;index"`
+				}
+
+				if err := tx.AutoMigrate(&PasswordResetToken{}); err != nil {
+					return err
+				}
+
+				// Add foreign key constraint
+				if err := tx.Exec("ALTER TABLE password_reset_tokens ADD CONSTRAINT fk_password_reset_tokens_user_id FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE").Error; err != nil {
+					return err
+				}
+
+				// Add indexes for performance
+				indexes := []string{
+					"CREATE INDEX IF NOT EXISTS idx_password_reset_tokens_user_id ON password_reset_tokens(user_id)",
+					"CREATE INDEX IF NOT EXISTS idx_password_reset_tokens_token ON password_reset_tokens(token)",
+					"CREATE INDEX IF NOT EXISTS idx_password_reset_tokens_expires_at ON password_reset_tokens(expires_at)",
+					"CREATE INDEX IF NOT EXISTS idx_password_reset_tokens_used_at ON password_reset_tokens(used_at)",
+				}
+
+				for _, query := range indexes {
+					if err := tx.Exec(query).Error; err != nil {
+						return err
+					}
+				}
+
+				return nil
+			},
+			Rollback: func(tx *gorm.DB) error {
+				return tx.Migrator().DropTable("password_reset_tokens")
+			},
+		},
 	}
 }
 
@@ -198,10 +288,14 @@ func GetInitialMigration() *gormigrate.Migration {
 				&models.User{},
 				&models.UserInfo{},
 				&models.AuthProvider{},
+				&models.EmailVerificationToken{},
+				&models.PasswordResetToken{},
 			)
 		},
 		Rollback: func(tx *gorm.DB) error {
 			return tx.Migrator().DropTable(
+				&models.PasswordResetToken{},
+				&models.EmailVerificationToken{},
 				&models.AuthProvider{},
 				&models.UserInfo{},
 				&models.User{},
