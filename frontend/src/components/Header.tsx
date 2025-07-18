@@ -5,6 +5,7 @@ import { useTheme } from '../context/ThemeContext';
 import { useTranslation } from 'react-i18next';
 import Icon from './common/Icons';
 import LanguageSelector from './LanguageSelector';
+import OrganizationSelector from './organizations/OrganizationSelector';
 
 const Header = ({ sidebarOpen, setSidebarOpen }) => {
   const { user, logout } = useAuth();
@@ -88,6 +89,9 @@ const Header = ({ sidebarOpen, setSidebarOpen }) => {
             <Icon name="alarm" />
             <span className="absolute top-1 right-1 block h-2 w-2 rounded-full bg-red-400"></span>
           </button>
+
+          {/* Organization Selector */}
+          <OrganizationSelector className="w-64" />
 
           {/* Language Selector */}
           <LanguageSelector />

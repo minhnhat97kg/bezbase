@@ -1,6 +1,7 @@
 package services
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"strconv"
@@ -313,35 +314,35 @@ func (r *RBACService) UpdateRole(ctx contextx.Contextx, id uint, req dto.UpdateR
 	return role, nil
 }
 
-func (r *RBACService) GetRoleByName(name string) (*models.Role, error) {
+func (r *RBACService) GetRoleByName(ctx contextx.Contextx, name string) (*models.Role, error) {
 	var role models.Role
-	if err := r.db.Where("name = ?", name).First(&role).Error; err != nil {
+	if err := r.db.WithContext(ctx).Where("name = ?", name).First(&role).Error; err != nil {
 		return nil, fmt.Errorf("role not found: %w", err)
 	}
 	return &role, nil
 }
 
-func (r *RBACService) GetRoleByID(id uint) (*models.Role, error) {
+func (r *RBACService) GetRoleByID(ctx contextx.Contextx, id uint) (*models.Role, error) {
 	var role models.Role
-	if err := r.db.First(&role, id).Error; err != nil {
+	if err := r.db.WithContext(ctx).First(&role, id).Error; err != nil {
 		return nil, fmt.Errorf("role not found: %w", err)
 	}
 	return &role, nil
 }
 
-func (r *RBACService) GetAllRolesWithMetadata() ([]models.Role, error) {
+func (r *RBACService) GetAllRolesWithMetadata(ctx contextx.Contextx) ([]models.Role, error) {
 	var roles []models.Role
-	if err := r.db.Find(&roles).Error; err != nil {
+	if err := r.db.WithContext(ctx).Find(&roles).Error; err != nil {
 		return nil, fmt.Errorf("failed to get roles: %w", err)
 	}
 	return roles, nil
 }
 
-func (r *RBACService) GetAllRolesWithPagination(page, pageSize int, searchFilter, statusFilter string, isSystemFilter *bool, sortField, sortOrder string) ([]models.Role, int, error) {
+func (r *RBACService) GetAllRolesWithPagination(ctx contextx.Contextx, page, pageSize int, searchFilter, statusFilter string, isSystemFilter *bool, sortField, sortOrder string) ([]models.Role, int, error) {
 	var roles []models.Role
 	var total int64
 
-	query := r.db.Model(&models.Role{})
+	query := r.db.WithContext(ctx).Model(&models.Role{})
 
 	// Apply search filter
 	if searchFilter != "" {
@@ -395,9 +396,9 @@ func (r *RBACService) GetAllRolesWithPagination(page, pageSize int, searchFilter
 	return roles, int(total), nil
 }
 
-func (r *RBACService) GetActiveRoles() ([]models.Role, error) {
+func (r *RBACService) GetActiveRoles(ctx contextx.Contextx) ([]models.Role, error) {
 	var roles []models.Role
-	if err := r.db.Where("is_active = ?", true).Find(&roles).Error; err != nil {
+	if err := r.db.WithContext(ctx).Where("is_active = ?", true).Find(&roles).Error; err != nil {
 		return nil, fmt.Errorf("failed to get active roles: %w", err)
 	}
 	return roles, nil
@@ -405,7 +406,7 @@ func (r *RBACService) GetActiveRoles() ([]models.Role, error) {
 
 func (r *RBACService) AddPermission(role, resource, action string) error {
 	// Validate role exists
-	roleModel, err := r.GetRoleByName(role)
+	roleModel, err := r.GetRoleByName(contextx.Background(), role)
 	if err != nil {
 		return fmt.Errorf("role validation failed: %w", err)
 	}
@@ -431,7 +432,7 @@ func (r *RBACService) RemovePermission(role, resource, action string) error {
 
 func (r *RBACService) AssignRoleToUser(userID uint, role string) error {
 	// Validate role exists and is active
-	roleModel, err := r.GetRoleByName(role)
+	roleModel, err := r.GetRoleByName(contextx.Background(), role)
 	if err != nil {
 		return fmt.Errorf("role validation failed: %w", err)
 	}
@@ -529,7 +530,7 @@ func (r *RBACService) GetAllPermissions(page, pageSize int, roleFilter, resource
 				matchingResourceActions = append(matchingResourceActions, fmt.Sprintf("%s:%s", perm.Resource.String(), perm.Action.String()))
 			}
 		}
-		
+
 		if len(matchingResourceActions) > 0 {
 			// Create OR conditions for each matching resource:action
 			conditions := make([]string, len(matchingResourceActions))
@@ -582,7 +583,7 @@ func (r *RBACService) GetAllPermissions(page, pageSize int, roleFilter, resource
 	for i, rule := range rules {
 		key := fmt.Sprintf("%s:%s", rule.V1, rule.V2)
 		permission := key // default to resource:action format
-		
+
 		// Use the hardcoded permission if available
 		if hardcodedPerm, exists := permissionMap[key]; exists {
 			permission = hardcodedPerm.Permission
@@ -636,4 +637,213 @@ func (r *RBACService) DeleteRoleByID(id uint) error {
 
 func (r *RBACService) ReloadPolicy() error {
 	return r.enforcer.LoadPolicy()
+}
+
+// Check permission with organization context
+func (r *RBACService) CheckPermissionWithContext(userID uint, resource, action string, orgID *uint) (bool, error) {
+	// Get user's roles in the organization context
+	userRoles, err := r.GetUserRolesInOrganization(userID, orgID)
+	if err != nil {
+		return false, err
+	}
+
+	// Check permissions for each role
+	for _, role := range userRoles {
+		// Check direct role permissions
+		ok, err := r.enforcer.Enforce(role.Name, resource, action)
+		if err != nil {
+			continue
+		}
+		if ok {
+			return true, nil
+		}
+
+		// Check contextual permissions
+		hasContextualPermission, err := r.checkContextualPermissions(role.ID, resource, action, orgID)
+		if err != nil {
+			continue
+		}
+		if hasContextualPermission {
+			return true, nil
+		}
+
+		// Check inherited permissions from parent roles
+		hasInheritedPermission, err := r.checkInheritedPermissions(role.ID, resource, action, orgID)
+		if err != nil {
+			continue
+		}
+		if hasInheritedPermission {
+			return true, nil
+		}
+	}
+
+	return false, nil
+}
+
+// Get user roles in organization context
+func (r *RBACService) GetUserRolesInOrganization(userID uint, orgID *uint) ([]models.Role, error) {
+	var roles []models.Role
+	query := r.db.Table("casbin_rules").
+		Select("roles.*").
+		Joins("JOIN roles ON casbin_rules.v1 = roles.name").
+		Where("casbin_rules.ptype = 'g' AND casbin_rules.v0 = ?", fmt.Sprintf("user:%d", userID))
+
+	if orgID != nil {
+		// Include both global roles and organization-specific roles
+		query = query.Where("roles.org_id IS NULL OR roles.org_id = ?", *orgID)
+	} else {
+		// Only global roles
+		query = query.Where("roles.org_id IS NULL")
+	}
+
+	err := query.Find(&roles).Error
+	return roles, err
+}
+
+// Check contextual permissions
+func (r *RBACService) checkContextualPermissions(roleID uint, resource, action string, orgID *uint) (bool, error) {
+	var count int64
+	query := r.db.Model(&models.ContextualPermission{}).
+		Where("role_id = ? AND resource = ? AND action = ? AND is_granted = ?",
+			roleID, resource, action, true)
+
+	if orgID != nil {
+		query = query.Where("(context_type = 'organization' AND context_value = ?) OR context_type IS NULL OR context_type = ''",
+			fmt.Sprintf("%d", *orgID))
+	} else {
+		query = query.Where("context_type IS NULL OR context_type = ''")
+	}
+
+	err := query.Count(&count).Error
+	return count > 0, err
+}
+
+// Check inherited permissions from parent roles
+func (r *RBACService) checkInheritedPermissions(roleID uint, resource, action string, orgID *uint) (bool, error) {
+	// Get all parent roles in the hierarchy
+	parentRoles, err := models.GetAllParentRoles(r.db, roleID)
+	if err != nil {
+		return false, err
+	}
+
+	for _, parentRole := range parentRoles {
+		// Check Casbin permissions for parent role
+		ok, err := r.enforcer.Enforce(parentRole.Name, resource, action)
+		if err != nil {
+			continue
+		}
+		if ok {
+			return true, nil
+		}
+
+		// Check contextual permissions for parent role
+		hasContextualPermission, err := r.checkContextualPermissions(parentRole.ID, resource, action, orgID)
+		if err != nil {
+			continue
+		}
+		if hasContextualPermission {
+			return true, nil
+		}
+	}
+
+	return false, nil
+}
+
+// Create role from template
+func (r *RBACService) CreateRoleFromTemplate(templateID uint, orgID *uint, customName string) (*models.Role, error) {
+	var template models.RoleTemplate
+	if err := r.db.First(&template, templateID).Error; err != nil {
+		return nil, fmt.Errorf("template not found: %w", err)
+	}
+
+	roleName := template.Name
+	if customName != "" {
+		roleName = customName
+	}
+	if orgID != nil {
+		roleName = fmt.Sprintf("%s_org_%d", roleName, *orgID)
+	}
+
+	role := &models.Role{
+		Name:           roleName,
+		DisplayName:    template.DisplayName,
+		Description:    template.Description,
+		IsSystem:       false,
+		IsActive:       true,
+		OrgID:          orgID,
+		HierarchyLevel: 2, // Templates create level 2 roles by default
+	}
+
+	ctx := contextx.NewContextx(context.Background())
+	roleReq := dto.CreateRoleRequest{
+		Name:        role.Name,
+		DisplayName: role.DisplayName,
+		Description: role.Description,
+	}
+
+	createdRole, err := r.CreateRole(ctx, roleReq)
+	if err != nil {
+		return nil, err
+	}
+
+	// TODO: Parse template.Config and create contextual permissions
+	// This would involve parsing the JSON config and creating the appropriate permissions
+
+	return createdRole, nil
+}
+
+// Get roles by organization
+func (r *RBACService) GetRolesByOrganization(orgID *uint) ([]models.Role, error) {
+	var roles []models.Role
+	query := r.db.Where("is_active = ?", true)
+
+	if orgID != nil {
+		query = query.Where("org_id = ? OR org_id IS NULL", *orgID)
+	} else {
+		query = query.Where("org_id IS NULL")
+	}
+
+	err := query.Order("hierarchy_level, display_name").Find(&roles).Error
+	return roles, err
+}
+
+// Update role hierarchy
+func (r *RBACService) SetRoleParent(childRoleID uint, parentRoleID *uint) error {
+	childRole, err := r.GetRoleByID(contextx.Background(), childRoleID)
+	if err != nil {
+		return err
+	}
+
+	if childRole.IsSystem {
+		return fmt.Errorf("cannot modify system role hierarchy")
+	}
+
+	if parentRoleID != nil {
+		parentRole, err := r.GetRoleByID(contextx.Background(), *parentRoleID)
+		if err != nil {
+			return fmt.Errorf("parent role not found: %w", err)
+		}
+
+		// Prevent circular dependencies
+		if parentRole.ParentRoleID != nil && *parentRole.ParentRoleID == childRoleID {
+			return fmt.Errorf("circular dependency detected")
+		}
+
+		// Update hierarchy level
+		childRole.HierarchyLevel = parentRole.HierarchyLevel + 1
+
+		// Create hierarchy relationship
+		if err := models.CreateRoleHierarchy(r.db, *parentRoleID, childRoleID); err != nil {
+			return err
+		}
+	} else {
+		// Remove parent relationship
+		if err := models.RemoveRoleHierarchy(r.db, childRoleID); err != nil {
+			return err
+		}
+		childRole.HierarchyLevel = 0
+	}
+
+	childRole.ParentRoleID = parentRoleID
+	return r.db.Save(childRole).Error
 }

@@ -36,7 +36,7 @@ func NewUserHandler(userService *services.UserService, rbacService *services.RBA
 // GetCurrentUserPermissions returns all permissions for the current user
 func (h *UserHandler) GetCurrentUserPermissions(c echo.Context) error {
 	t := i18n.NewTranslator(c.Request().Context())
-	
+
 	claims, ok := c.Get("user").(*auth.Claims)
 	if !ok || claims == nil {
 		return echo.NewHTTPError(http.StatusUnauthorized, t.Error("invalid_user_context"))
@@ -184,7 +184,7 @@ func (h *UserHandler) GetUser(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, "Invalid user ID")
 	}
 
-	user, err := h.userService.GetUserByIDDetailed(id)
+	user, err := h.userService.GetUserByIDDetailed(contextx.NewWithRequestContext(c), id)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusNotFound, err.Error())
 	}

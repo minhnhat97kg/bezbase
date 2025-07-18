@@ -6,6 +6,7 @@ import (
 
 	"bezbase/internal/models"
 	"bezbase/internal/pkg/auth"
+	"bezbase/internal/pkg/contextx"
 	"bezbase/internal/services"
 
 	"github.com/labstack/echo/v4"
@@ -53,7 +54,7 @@ func RequireRole(rbacService *services.RBACService, role string) echo.Middleware
 			}
 
 			// Check if role exists and is active
-			roleModel, err := rbacService.GetRoleByName(role)
+			roleModel, err := rbacService.GetRoleByName(contextx.Background(), role)
 			if err != nil {
 				return echo.NewHTTPError(http.StatusInternalServerError, fmt.Sprintf("Role validation failed: %v", err))
 			}

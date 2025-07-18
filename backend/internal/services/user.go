@@ -242,7 +242,7 @@ func (s *UserService) SearchUsers(ctx contextx.Contextx, searchTerm string) ([]d
 
 // DeleteUser soft deletes a user and related data
 func (s *UserService) DeleteUser(ctx contextx.Contextx, userID uint) error {
-	tx := s.db.Begin()
+	tx := ctx.GetTxn(s.db).Begin()
 	defer func() {
 		if r := recover(); r != nil {
 			tx.Rollback()
@@ -278,12 +278,12 @@ func (s *UserService) DeleteUser(ctx contextx.Contextx, userID uint) error {
 func (s *UserService) CreateUser(ctx contextx.Contextx, req dto.CreateUserRequest) (*dto.UserResponse, error) {
 	// Check if user with this email already exists
 	var existingUserInfo models.UserInfo
-	if err := s.db.Where("email = ?", req.Email).First(&existingUserInfo).Error; err == nil {
+	if err := ctx.GetTxn(s.db).Where("email = ?", req.Email).First(&existingUserInfo).Error; err == nil {
 		return nil, errors.New("user with this email already exists")
 	}
 
 	// Check if username is already taken
-	if err := s.db.Where("username = ?", req.Username).First(&existingUserInfo).Error; err == nil {
+	if err := ctx.GetTxn(s.db).Where("username = ?", req.Username).First(&existingUserInfo).Error; err == nil {
 		return nil, errors.New("username already taken")
 	}
 
@@ -294,7 +294,7 @@ func (s *UserService) CreateUser(ctx contextx.Contextx, req dto.CreateUserReques
 	}
 
 	// Begin transaction
-	tx := s.db.Begin()
+	tx := ctx.GetTxn(s.db).Begin()
 	defer func() {
 		if r := recover(); r != nil {
 			tx.Rollback()
@@ -365,9 +365,9 @@ func (s *UserService) CreateUser(ctx contextx.Contextx, req dto.CreateUserReques
 }
 
 // GetUserByID retrieves a user by ID with all information
-func (s *UserService) GetUserByIDDetailed(userID uint) (*dto.UserResponse, error) {
-	var user models.User
-	if err := s.db.Preload("UserInfo").First(&user, userID).Error; err != nil {
+func (s *UserService) GetUserByIDDetailed(ctx contextx.Contextx, userID uint) (*dto.UserResponse, error) {
+	user, err := s.userRepo.GetByIDDetailed(ctx, userID)
+	if err != nil {
 		return nil, errors.New("user not found")
 	}
 
@@ -379,7 +379,7 @@ func (s *UserService) GetUserByIDDetailed(userID uint) (*dto.UserResponse, error
 		}
 	}
 
-	response := dto.ToUserResponseWithRoles(&user, roles)
+	response := dto.ToUserResponseWithRoles(user, roles)
 	return &response, nil
 }
 
@@ -387,20 +387,20 @@ func (s *UserService) GetUserByIDDetailed(userID uint) (*dto.UserResponse, error
 func (s *UserService) UpdateUser(ctx contextx.Contextx, userID uint, req dto.UpdateUserRequest) (*dto.UserResponse, error) {
 	// Check if user exists
 	var user models.User
-	if err := s.db.Preload("UserInfo").First(&user, userID).Error; err != nil {
+	if err := ctx.GetTxn(s.db).Preload("UserInfo").First(&user, userID).Error; err != nil {
 		return nil, errors.New("user not found")
 	}
 
 	// Check if email is being changed and if it's already taken
 	if req.Email != "" && req.Email != user.UserInfo.Email {
 		var existingUser models.User
-		if err := s.db.Joins("UserInfo").Where("user_info.email = ? AND users.id != ?", req.Email, userID).First(&existingUser).Error; err == nil {
+		if err := ctx.GetTxn(s.db).Joins("UserInfo").Where("user_info.email = ? AND users.id != ?", req.Email, userID).First(&existingUser).Error; err == nil {
 			return nil, errors.New("email already taken by another user")
 		}
 	}
 
 	// Begin transaction
-	tx := s.db.Begin()
+	tx := ctx.GetTxn(s.db).Begin()
 	defer func() {
 		if r := recover(); r != nil {
 			tx.Rollback()

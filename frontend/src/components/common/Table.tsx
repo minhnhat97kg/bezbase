@@ -4,7 +4,8 @@ import Icon from './Icons';
 
 interface TableColumn {
   key: string;
-  header: string;
+  header?: string;
+  label?: string;
   sortable?: boolean;
   nowrap?: boolean;
   align?: string;
@@ -184,7 +185,7 @@ const Table: React.FC<TableProps> = ({
                     key={index}
                     className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider"
                   >
-                    {column.header}
+                    {column.header || column.label}
                   </th>
                 ))}
               </tr>
@@ -218,7 +219,7 @@ const Table: React.FC<TableProps> = ({
                     key={index}
                     className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider"
                   >
-                    {column.header}
+                    {column.header || column.label}
                   </th>
                 ))}
               </tr>
@@ -257,7 +258,7 @@ const Table: React.FC<TableProps> = ({
                   onClick={column.sortable && onSort ? () => onSort(column.key) : undefined}
                 >
                   <div className={`flex items-center ${column.align === 'right' ? 'justify-end' : ''} space-x-1`}>
-                    <span>{column.header}</span>
+                    <span>{column.header || column.label}</span>
                     {column.sortable && onSort && getSortIcon(column.key)}
                   </div>
                 </th>

@@ -152,7 +152,7 @@ const UserManagement = () => {
   };
 
   const getRolesBadges = (roles) => {
-    if (!roles || roles.length === 0) {
+    if (!roles || !Array.isArray(roles) || roles.length === 0) {
       return (
         <span className="px-2 py-1 text-xs font-medium rounded-full bg-gray-100 text-gray-800">
           {t('users.noRoles')}

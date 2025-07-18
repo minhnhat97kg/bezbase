@@ -17,17 +17,20 @@ const (
 
 // User is the central entity that represents a user account
 type User struct {
-	ID            uint           `json:"id" gorm:"primaryKey"`
-	Status        UserStatus     `json:"status" gorm:"not null;default:'pending'"`
-	EmailVerified bool           `json:"email_verified" gorm:"default:false"`
-	LastLoginAt   *time.Time     `json:"last_login_at"`
-	CreatedAt     time.Time      `json:"created_at"`
-	UpdatedAt     time.Time      `json:"updated_at"`
-	DeletedAt     gorm.DeletedAt `json:"-" gorm:"index"`
+	ID           uint           `json:"id" gorm:"primaryKey"`
+	Status       UserStatus     `json:"status" gorm:"not null;default:'pending'"`
+	EmailVerified bool          `json:"email_verified" gorm:"default:false"`
+	CurrentOrgID *uint          `json:"current_org_id" gorm:"index"`
+	LastLoginAt  *time.Time     `json:"last_login_at"`
+	CreatedAt    time.Time      `json:"created_at"`
+	UpdatedAt    time.Time      `json:"updated_at"`
+	DeletedAt    gorm.DeletedAt `json:"-" gorm:"index"`
 
 	// Relationships
-	UserInfo      *UserInfo      `json:"user_info,omitempty" gorm:"foreignKey:UserID"`
-	AuthProviders []AuthProvider `json:"auth_providers,omitempty" gorm:"foreignKey:UserID"`
+	UserInfo       *UserInfo           `json:"user_info,omitempty" gorm:"foreignKey:UserID"`
+	AuthProviders  []AuthProvider      `json:"auth_providers,omitempty" gorm:"foreignKey:UserID"`
+	CurrentOrg     *Organization       `json:"current_org,omitempty" gorm:"foreignKey:CurrentOrgID"`
+	Organizations  []OrganizationUser  `json:"organizations,omitempty" gorm:"foreignKey:UserID"`
 }
 
 // GetPrimaryEmail returns the primary email from UserInfo

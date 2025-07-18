@@ -86,3 +86,56 @@ func (c *contextx) GetTxn(db *gorm.DB) *gorm.DB {
 	}
 	return c.txn.WithContext(c.Context)
 }
+
+// Organization context keys
+type contextKey string
+
+const (
+	OrganizationIDKey contextKey = "organization_id"
+	UserIDKey         contextKey = "user_id"
+)
+
+// WithOrganizationID adds organization ID to context
+func WithOrganizationID(ctx Contextx, orgID uint) Contextx {
+	newCtx := context.WithValue(ctx, OrganizationIDKey, orgID)
+	return &contextx{
+		Context: newCtx,
+		reqCtx:  ctx.ReqContext(),
+		txn:     ctx.(*contextx).txn,
+	}
+}
+
+// GetOrganizationID gets organization ID from context
+func GetOrganizationID(ctx Contextx) *uint {
+	if orgID := ctx.Value(OrganizationIDKey); orgID != nil {
+		if id, ok := orgID.(uint); ok {
+			return &id
+		}
+	}
+	return nil
+}
+
+// WithUserID adds user ID to context
+func WithUserID(ctx Contextx, userID uint) Contextx {
+	newCtx := context.WithValue(ctx, UserIDKey, userID)
+	return &contextx{
+		Context: newCtx,
+		reqCtx:  ctx.ReqContext(),
+		txn:     ctx.(*contextx).txn,
+	}
+}
+
+// GetUserID gets user ID from context
+func GetUserID(ctx Contextx) *uint {
+	if userID := ctx.Value(UserIDKey); userID != nil {
+		if id, ok := userID.(uint); ok {
+			return &id
+		}
+	}
+	return nil
+}
+
+// FromEchoContext creates a contextx from echo context
+func FromEchoContext(c echo.Context) Contextx {
+	return NewWithRequestContext(c)
+}

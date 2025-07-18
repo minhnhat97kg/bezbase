@@ -2,7 +2,6 @@ package main
 
 import (
 	"log"
-	"os"
 
 	"bezbase/internal/config"
 	"bezbase/internal/database"
@@ -59,7 +58,7 @@ func main() {
 	e.Use(echomiddleware.Recover())
 	e.Use(echomiddleware.CORS())
 	e.Use(middleware.I18nMiddleware()) // Add i18n middleware
-	e.Use(middleware.Versioning())    // Add versioning middleware
+	e.Use(middleware.Versioning())     // Add versioning middleware
 
 	// Initialize repositories
 	userRepo := repository.NewUserRepository(db)
@@ -69,6 +68,16 @@ func main() {
 	passwordResetRepo := repository.NewPasswordResetRepository(db)
 	roleRepo := repository.NewRoleRepository(db)
 	ruleRepo := repository.NewRuleRepository(db)
+
+	// Advanced RBAC repositories
+	roleTemplateRepo := repository.NewRoleTemplateRepository(db)
+	contextualPermissionRepo := repository.NewContextualPermissionRepository(db)
+	roleInheritanceRepo := repository.NewRoleInheritanceRepository(db)
+
+	// Organization repositories
+	orgRepo := repository.NewOrganizationRepository(db)
+	orgUserRepo := repository.NewOrganizationUserRepository(db)
+	orgInvitationRepo := repository.NewOrganizationInvitationRepository(db)
 
 	// Initialize services
 	rbacService, err := services.NewRBACService(roleRepo, ruleRepo, db)
@@ -80,10 +89,13 @@ func main() {
 	passwordResetService := services.NewPasswordResetService(userRepo, userInfoRepo, authProviderRepo, passwordResetRepo, emailService)
 	authService := services.NewAuthService(userRepo, userInfoRepo, authProviderRepo, &cfg.Auth, db)
 	userService := services.NewUserService(userRepo, userInfoRepo, authProviderRepo, rbacService, db)
+	orgService := services.NewOrganizationService(orgRepo, orgUserRepo, orgInvitationRepo, userRepo, rbacService, emailService, db)
 
 	// Initialize handlers
 	commonHandler := handlers.NewCommonHandler()
 	rbacHandler := handlers.NewRBACHandler(rbacService)
+	advancedRbacHandler := handlers.NewAdvancedRBACHandler(rbacService, roleTemplateRepo, contextualPermissionRepo, roleInheritanceRepo, db)
+	orgHandler := handlers.NewOrganizationHandler(orgService)
 	userHandler := handlers.NewUserHandler(userService, rbacService)
 	authHandler := handlers.NewAuthHandler(authService)
 	emailVerificationHandler := handlers.NewEmailVerificationHandler(emailVerificationService)
@@ -103,13 +115,13 @@ func main() {
 	auth.Use(middleware.AuthRateLimit()) // Add rate limiting for auth endpoints
 	auth.POST("/register", authHandler.Register)
 	auth.POST("/login", authHandler.Login)
-	
+
 	// Email verification routes (public)
 	auth.POST("/send-verification-email", emailVerificationHandler.SendVerificationEmail)
 	auth.POST("/verify-email", emailVerificationHandler.VerifyEmail)
 	auth.GET("/verify-email", emailVerificationHandler.VerifyEmailByToken)
 	auth.POST("/resend-verification-email", emailVerificationHandler.ResendVerificationEmail)
-	
+
 	// Password reset routes (public)
 	auth.POST("/request-password-reset", passwordResetHandler.RequestPasswordReset)
 	auth.POST("/reset-password", passwordResetHandler.ResetPassword)
@@ -160,13 +172,34 @@ func main() {
 	rbacGroup.DELETE("/permissions", rbacHandler.RemovePermission, middleware.RequirePermission(rbacService, models.PermissionDeletePermissions))
 	rbacGroup.GET("/users/:user_id/check-permission", rbacHandler.CheckPermission)
 
+	// Advanced RBAC endpoints
+	// Role templates
+	rbacGroup.GET("/role-templates", advancedRbacHandler.GetRoleTemplates, middleware.RequirePermission(rbacService, models.PermissionViewRoles))
+
+	// Role hierarchy and template creation
+	rbacGroup.POST("/roles/from-template", advancedRbacHandler.CreateRoleFromTemplate, middleware.RequirePermission(rbacService, models.PermissionCreateRoles))
+	rbacGroup.PUT("/roles/:role_id/parent", advancedRbacHandler.SetRoleParent, middleware.RequirePermission(rbacService, models.PermissionEditRoles))
+	rbacGroup.GET("/roles/:role_id/hierarchy", advancedRbacHandler.GetRoleHierarchy, middleware.RequirePermission(rbacService, models.PermissionViewRoles))
+
+	// Contextual permissions
+	rbacGroup.POST("/contextual-permissions", advancedRbacHandler.CreateContextualPermission, middleware.RequirePermission(rbacService, models.PermissionCreatePermissions))
+	rbacGroup.GET("/users/:user_id/effective-permissions", advancedRbacHandler.GetEffectivePermissions, middleware.RequirePermission(rbacService, models.PermissionViewPermissions))
+
+	// Organization management routes (TODO: Implement missing handler methods)
+	orgGroup := apiV1.Group("/organizations")
+
+	// Basic organization endpoints that exist
+	orgGroup.POST("", orgHandler.CreateOrganization, middleware.RequirePermission(rbacService, models.PermissionCreateUsers)) // Reuse user permission for now
+	orgGroup.GET("/:id", orgHandler.GetOrganization, middleware.RequirePermission(rbacService, models.PermissionViewUsers))
+
+	// TODO: Add remaining organization endpoints once handler methods are implemented
 
 	// API v2 (future version example)
 	apiV2 := api.Group("/v2")
-	apiV2.Use(middleware.APIRateLimit())              // Add rate limiting for API endpoints
+	apiV2.Use(middleware.APIRateLimit()) // Add rate limiting for API endpoints
 	apiV2.Use(middleware.JWTMiddleware(cfg.Auth.JWTSecret))
-	apiV2.Use(middleware.RequireMinVersion(2))        // Require minimum version 2
-	
+	apiV2.Use(middleware.RequireMinVersion(2)) // Require minimum version 2
+
 	// Health check
 	api.GET("/health", commonHandler.HealthCheck)
 

@@ -127,8 +127,8 @@ const Profile = () => {
   };
 
   const tabs = [
-    { id: 'profile', name: t('profile.profileInfoTab'), icon: 'user' },
-    { id: 'password', name: t('profile.changePasswordTab'), icon: 'shield' },
+    { id: 'profile', label: t('profile.profileInfoTab'), icon: 'user' },
+    { id: 'password', label: t('profile.changePasswordTab'), icon: 'shield' },
   ];
 
   return (

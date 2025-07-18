@@ -93,7 +93,7 @@ func (h *RBACHandler) GetRoles(c echo.Context) error {
 		sortOrder = "asc"
 	}
 
-	roles, total, err := h.rbacService.GetAllRolesWithPagination(pagination.Page, pagination.PageSize, searchFilter, statusFilter, isSystemFilter, sortField, sortOrder)
+	roles, total, err := h.rbacService.GetAllRolesWithPagination(contextx.NewWithRequestContext(c), pagination.Page, pagination.PageSize, searchFilter, statusFilter, isSystemFilter, sortField, sortOrder)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
 	}
@@ -122,7 +122,8 @@ func (h *RBACHandler) GetRole(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, "Invalid role ID")
 	}
 
-	role, err := h.rbacService.GetRoleByID(uint(roleID))
+	ctxx := contextx.NewWithRequestContext(c)
+	role, err := h.rbacService.GetRoleByID(ctxx, uint(roleID))
 	if err != nil {
 		return echo.NewHTTPError(http.StatusNotFound, err.Error())
 	}
@@ -495,4 +496,3 @@ func (h *RBACHandler) GetAvailablePermissions(c echo.Context) error {
 	permissions := models.GetHardcodedPermissions()
 	return c.JSON(http.StatusOK, permissions)
 }
-

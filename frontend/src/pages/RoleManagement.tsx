@@ -132,9 +132,9 @@ const RoleManagement = () => {
   };
 
   const tabs = [
-    { id: 'roles', name: t('roles.tabs.roles'), icon: 'shield' },
-    { id: 'permissions', name: t('roles.tabs.permissions'), icon: 'key' },
-    { id: 'assignments', name: t('roles.tabs.userAssignments'), icon: 'users' },
+    { id: 'roles', label: t('roles.tabs.roles'), icon: 'shield' },
+    { id: 'permissions', label: t('roles.tabs.permissions'), icon: 'key' },
+    { id: 'assignments', label: t('roles.tabs.userAssignments'), icon: 'users' },
   ];
 
   if (loading) {

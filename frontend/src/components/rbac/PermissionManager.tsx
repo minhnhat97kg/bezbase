@@ -355,7 +355,7 @@ const PermissionManager: React.FC<PermissionManagerProps> = ({ roles, onRefresh 
                           required
                         >
                           <option value="">Select role...</option>
-                          {roles.map((role) => (
+                          {Array.isArray(roles) && roles.map((role) => (
                             <option key={role.id} value={role.name}>
                               {role.display_name} ({role.name})
                             </option>

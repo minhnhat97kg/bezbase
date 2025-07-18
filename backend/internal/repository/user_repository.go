@@ -121,3 +121,14 @@ func (r *userRepository) VerifyEmail(ctx contextx.Contextx, userID uint) error {
 	}
 	return nil
 }
+
+func (r *userRepository) GetByIDDetailed(ctx contextx.Contextx, userID uint) (*models.User, error) {
+	var user models.User
+	if err := ctx.GetTxn(r.db).WithContext(ctx).Preload("UserInfo").Preload("AuthProviders").First(&user, userID).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, errors.New("user not found")
+		}
+		return nil, err
+	}
+	return &user, nil
+}
