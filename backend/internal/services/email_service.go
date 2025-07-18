@@ -2,48 +2,59 @@ package services
 
 import (
 	"bytes"
+	"context"
 	"crypto/rand"
 	"encoding/hex"
 	"fmt"
 	"html/template"
-	"log"
-	"net/smtp"
-	"os"
 	"time"
 
+	"bezbase/internal/config"
 	"bezbase/internal/models"
 	"bezbase/internal/pkg/contextx"
 	"bezbase/internal/repository"
+	"bezbase/internal/thirdparty/email"
 )
 
 type EmailService struct {
 	verificationRepo repository.EmailVerificationRepository
-	smtpHost         string
-	smtpPort         string
-	smtpUsername     string
-	smtpPassword     string
-	fromEmail        string
+	emailProvider    email.EmailProvider
 	baseURL          string
 }
 
-func NewEmailService(verificationRepo repository.EmailVerificationRepository) *EmailService {
+func NewEmailService(verificationRepo repository.EmailVerificationRepository, cfg *config.EmailConfig, baseURL string) *EmailService {
+	var emailProvider email.EmailProvider
+	
+	// Create provider based on configuration
+	switch cfg.Provider {
+	case "smtp":
+		smtpConfig := &email.SMTPConfig{
+			Host:      cfg.SMTPHost,
+			Port:      cfg.SMTPPort,
+			Username:  cfg.SMTPUsername,
+			Password:  cfg.SMTPPassword,
+			FromEmail: cfg.FromEmail,
+		}
+		emailProvider = email.NewSMTPProvider(smtpConfig)
+	default:
+		// Default to SMTP if provider not specified
+		smtpConfig := &email.SMTPConfig{
+			Host:      cfg.SMTPHost,
+			Port:      cfg.SMTPPort,
+			Username:  cfg.SMTPUsername,
+			Password:  cfg.SMTPPassword,
+			FromEmail: cfg.FromEmail,
+		}
+		emailProvider = email.NewSMTPProvider(smtpConfig)
+	}
+	
 	return &EmailService{
 		verificationRepo: verificationRepo,
-		smtpHost:         getEnv("SMTP_HOST", "smtp.gmail.com"),
-		smtpPort:         getEnv("SMTP_PORT", "587"),
-		smtpUsername:     getEnv("SMTP_USERNAME", ""),
-		smtpPassword:     getEnv("SMTP_PASSWORD", ""),
-		fromEmail:        getEnv("FROM_EMAIL", "noreply@bezbase.com"),
-		baseURL:          getEnv("BASE_URL", "http://localhost:3000"),
+		emailProvider:    emailProvider,
+		baseURL:          baseURL,
 	}
 }
 
-func getEnv(key, defaultValue string) string {
-	if value := os.Getenv(key); value != "" {
-		return value
-	}
-	return defaultValue
-}
 
 func (s *EmailService) SendVerificationEmail(ctx contextx.Contextx, user *models.User, email string) error {
 	// Generate verification token
@@ -79,7 +90,7 @@ func (s *EmailService) SendVerificationEmail(ctx contextx.Contextx, user *models
 		return fmt.Errorf("failed to generate email body: %w", err)
 	}
 
-	return s.sendEmail(email, subject, body)
+	return s.emailProvider.SendEmail(context.Background(), email, subject, body)
 }
 
 func (s *EmailService) SendPasswordResetEmail(ctx contextx.Contextx, user *models.User, token string) error {
@@ -91,40 +102,9 @@ func (s *EmailService) SendPasswordResetEmail(ctx contextx.Contextx, user *model
 		return fmt.Errorf("failed to generate email body: %w", err)
 	}
 
-	return s.sendEmail(user.GetPrimaryEmail(), subject, body)
+	return s.emailProvider.SendEmail(context.Background(), user.GetPrimaryEmail(), subject, body)
 }
 
-func (s *EmailService) sendEmail(to, subject, body string) error {
-	// Skip sending email if SMTP is not configured
-	if s.smtpUsername == "" || s.smtpPassword == "" {
-		log.Printf("Email would be sent to %s with subject: %s", to, subject)
-		log.Printf("Email body: %s", body)
-		return nil
-	}
-
-	// Setup headers
-	headers := map[string]string{
-		"From":         s.fromEmail,
-		"To":           to,
-		"Subject":      subject,
-		"MIME-Version": "1.0",
-		"Content-Type": "text/html; charset=UTF-8",
-	}
-
-	// Build message
-	message := ""
-	for k, v := range headers {
-		message += fmt.Sprintf("%s: %s\r\n", k, v)
-	}
-	message += "\r\n" + body
-
-	// Setup authentication
-	auth := smtp.PlainAuth("", s.smtpUsername, s.smtpPassword, s.smtpHost)
-
-	// Send email
-	addr := fmt.Sprintf("%s:%s", s.smtpHost, s.smtpPort)
-	return smtp.SendMail(addr, auth, s.fromEmail, []string{to}, []byte(message))
-}
 
 func (s *EmailService) generateEmailVerificationHTML(name, verificationURL string) (string, error) {
 	tmpl := `

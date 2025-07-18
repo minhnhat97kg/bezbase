@@ -5,6 +5,7 @@ import Table from '../components/common/Table';
 import Icon from '../components/common/Icons';
 import { useAuth } from '../hooks/useAuth';
 import CommonLayout from '../components/common/CommonLayout';
+import { USER_STATUS, USER_STATUS_COLORS, DEFAULT_VALUES } from '../constants';
 
 const UserManagement = () => {
   const { user: currentUser } = useAuth();
@@ -25,10 +26,10 @@ const UserManagement = () => {
   const [userToDelete, setUserToDelete] = useState(null);
   const [pagination, setPagination] = useState({
     currentPage: 1,
-    pageSize: 10,
+    pageSize: DEFAULT_VALUES.PAGE_SIZE,
     total: 0,
     totalPages: 1,
-    pageSizeOptions: [1, 5, 10, 25, 50]
+    pageSizeOptions: DEFAULT_VALUES.PAGE_SIZE_OPTIONS
   });
 
   const fetchUsers = async () => {
@@ -132,15 +133,8 @@ const UserManagement = () => {
   };
 
   const getStatusBadge = (status) => {
-    const statusColors = {
-      active: 'bg-green-100 text-green-800',
-      inactive: 'bg-gray-100 text-gray-800',
-      suspended: 'bg-red-100 text-red-800',
-      pending: 'bg-yellow-100 text-yellow-800'
-    };
-
     return (
-      <span className={`px-2 py-1 text-xs font-medium rounded-full ${statusColors[status] || statusColors.inactive}`}>
+      <span className={`px-2 py-1 text-xs font-medium rounded-full ${USER_STATUS_COLORS[status] || USER_STATUS_COLORS[USER_STATUS.INACTIVE]}`}>
         {status}
       </span>
     );
@@ -356,9 +350,9 @@ const CreateUserModal = ({ onClose, onSuccess }) => {
     last_name: '',
     email: '',
     password: '',
-    status: 'active',
-    language: 'en',
-    timezone: 'UTC',
+    status: USER_STATUS.ACTIVE,
+    language: DEFAULT_VALUES.LANGUAGE,
+    timezone: DEFAULT_VALUES.TIMEZONE,
     bio: '',
     location: '',
     website: '',
@@ -477,10 +471,10 @@ const CreateUserModal = ({ onClose, onSuccess }) => {
                 required
                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white"
               >
-                <option value="active">Active</option>
-                <option value="inactive">Inactive</option>
-                <option value="suspended">Suspended</option>
-                <option value="pending">Pending</option>
+                <option value={USER_STATUS.ACTIVE}>Active</option>
+                <option value={USER_STATUS.INACTIVE}>Inactive</option>
+                <option value={USER_STATUS.SUSPENDED}>Suspended</option>
+                <option value={USER_STATUS.PENDING}>Pending</option>
               </select>
             </div>
 
@@ -592,9 +586,9 @@ const EditUserModal = ({ user, onClose, onSuccess }) => {
     first_name: user.first_name || '',
     last_name: user.last_name || '',
     email: user.email || '',
-    status: user.status || 'active',
-    language: user.language || 'en',
-    timezone: user.timezone || 'UTC',
+    status: user.status || USER_STATUS.ACTIVE,
+    language: user.language || DEFAULT_VALUES.LANGUAGE,
+    timezone: user.timezone || DEFAULT_VALUES.TIMEZONE,
     bio: user.bio || '',
     location: user.location || '',
     website: user.website || '',
@@ -694,10 +688,10 @@ const EditUserModal = ({ user, onClose, onSuccess }) => {
                 onChange={handleChange}
                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white"
               >
-                <option value="active">Active</option>
-                <option value="inactive">Inactive</option>
-                <option value="suspended">Suspended</option>
-                <option value="pending">Pending</option>
+                <option value={USER_STATUS.ACTIVE}>Active</option>
+                <option value={USER_STATUS.INACTIVE}>Inactive</option>
+                <option value={USER_STATUS.SUSPENDED}>Suspended</option>
+                <option value={USER_STATUS.PENDING}>Pending</option>
               </select>
             </div>
 

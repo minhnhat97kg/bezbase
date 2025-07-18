@@ -169,11 +169,17 @@ const addResponseInterceptor = (instance: any) => {
       return response;
     },
     (error) => {
-      // Handle auth errors
+      // Handle auth errors - but only redirect if this is NOT a login/register request
       if (error.response?.status === 401) {
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
-        window.location.href = '/login';
+        const isAuthRequest = error.config?.url?.includes('/auth/login') || 
+                             error.config?.url?.includes('/auth/register');
+        
+        if (!isAuthRequest) {
+          // Only redirect to login for protected routes, not auth failures
+          localStorage.removeItem('token');
+          localStorage.removeItem('user');
+          window.location.href = '/login';
+        }
       }
       
       // Handle API version errors

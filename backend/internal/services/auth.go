@@ -4,6 +4,7 @@ import (
 	"errors"
 	"time"
 
+	"bezbase/internal/config"
 	"bezbase/internal/dto"
 	"bezbase/internal/models"
 	"bezbase/internal/pkg/auth"
@@ -16,7 +17,7 @@ type AuthService struct {
 	userRepo         repository.UserRepository
 	userInfoRepo     repository.UserInfoRepository
 	authProviderRepo repository.AuthProviderRepository
-	jwtSecret        string
+	authConfig       *config.AuthConfig
 	db               *gorm.DB
 }
 
@@ -24,14 +25,14 @@ func NewAuthService(
 	userRepo repository.UserRepository,
 	userInfoRepo repository.UserInfoRepository,
 	authProviderRepo repository.AuthProviderRepository,
-	jwtSecret string,
+	authConfig *config.AuthConfig,
 	db *gorm.DB,
 ) *AuthService {
 	return &AuthService{
 		userRepo:         userRepo,
 		userInfoRepo:     userInfoRepo,
 		authProviderRepo: authProviderRepo,
-		jwtSecret:        jwtSecret,
+		authConfig:       authConfig,
 		db:               db,
 	}
 }
@@ -120,7 +121,7 @@ func (s *AuthService) Register(req dto.RegisterRequest) (*dto.AuthResponse, erro
 	user.UserInfo = &userInfo
 
 	// Generate JWT token
-	token, err := auth.GenerateToken(user.ID, user.UserInfo.Username, s.jwtSecret)
+	token, err := auth.GenerateToken(user.ID, user.UserInfo.Username, s.authConfig.JWTSecret)
 	if err != nil {
 		return nil, errors.New("failed to generate token")
 	}
@@ -156,7 +157,7 @@ func (s *AuthService) LoginWithUsername(req dto.LoginRequest) (*dto.AuthResponse
 	s.db.Save(&user)
 
 	// Generate JWT token
-	token, err := auth.GenerateToken(user.ID, user.UserInfo.Username, s.jwtSecret)
+	token, err := auth.GenerateToken(user.ID, user.UserInfo.Username, s.authConfig.JWTSecret)
 	if err != nil {
 		return nil, errors.New("failed to generate token")
 	}
@@ -230,7 +231,7 @@ func (s *AuthService) RegisterWithSocialProvider(provider models.AuthProviderTyp
 	user.UserInfo = &userInfo
 
 	// Generate JWT token
-	token, err := auth.GenerateToken(user.ID, user.UserInfo.Username, s.jwtSecret)
+	token, err := auth.GenerateToken(user.ID, user.UserInfo.Username, s.authConfig.JWTSecret)
 	if err != nil {
 		return nil, errors.New("failed to generate token")
 	}
@@ -261,7 +262,7 @@ func (s *AuthService) loginWithSocialProvider(provider models.AuthProviderType, 
 	s.db.Save(&user)
 
 	// Generate JWT token
-	token, err := auth.GenerateToken(user.ID, user.UserInfo.Email, s.jwtSecret)
+	token, err := auth.GenerateToken(user.ID, user.UserInfo.Email, s.authConfig.JWTSecret)
 	if err != nil {
 		return nil, errors.New("failed to generate token")
 	}

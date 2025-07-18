@@ -24,7 +24,7 @@ func main() {
 	cfg := config.Load()
 
 	// Initialize database
-	db, err := database.Connect(cfg.DatabaseURL)
+	db, err := database.Connect(cfg.Database.URL)
 	if err != nil {
 		log.Fatal("Failed to connect to database:", err)
 	}
@@ -75,10 +75,10 @@ func main() {
 	if err != nil {
 		log.Fatal("Failed to initialize RBAC service:", err)
 	}
-	emailService := services.NewEmailService(emailVerificationRepo)
+	emailService := services.NewEmailService(emailVerificationRepo, &cfg.Email, cfg.Server.BaseURL)
 	emailVerificationService := services.NewEmailVerificationService(userRepo, emailVerificationRepo, emailService)
 	passwordResetService := services.NewPasswordResetService(userRepo, userInfoRepo, authProviderRepo, passwordResetRepo, emailService)
-	authService := services.NewAuthService(userRepo, userInfoRepo, authProviderRepo, cfg.JWTSecret, db)
+	authService := services.NewAuthService(userRepo, userInfoRepo, authProviderRepo, &cfg.Auth, db)
 	userService := services.NewUserService(userRepo, userInfoRepo, authProviderRepo, rbacService, db)
 
 	// Initialize handlers
@@ -117,7 +117,7 @@ func main() {
 	auth.GET("/validate-reset-token", passwordResetHandler.ValidateResetTokenByParam)
 
 	// Protected routes (add JWT middleware after auth routes)
-	apiV1.Use(middleware.JWTMiddleware(cfg.JWTSecret))
+	apiV1.Use(middleware.JWTMiddleware(cfg.Auth.JWTSecret))
 
 	// Profile routes (users can access their own profile)
 	apiV1.GET("/profile", userHandler.GetProfile, middleware.RequirePermission(rbacService, models.PermissionViewProfile))
@@ -164,18 +164,13 @@ func main() {
 	// API v2 (future version example)
 	apiV2 := api.Group("/v2")
 	apiV2.Use(middleware.APIRateLimit())              // Add rate limiting for API endpoints
-	apiV2.Use(middleware.JWTMiddleware(cfg.JWTSecret))
+	apiV2.Use(middleware.JWTMiddleware(cfg.Auth.JWTSecret))
 	apiV2.Use(middleware.RequireMinVersion(2))        // Require minimum version 2
 	
 	// Health check
 	api.GET("/health", commonHandler.HealthCheck)
 
 	// Start server
-	port := os.Getenv("PORT")
-	if port == "" {
-		port = "8080"
-	}
-
-	log.Printf("Server starting on port %s", port)
-	log.Fatal(e.Start(":" + port))
+	log.Printf("Server starting on port %s", cfg.Server.Port)
+	log.Fatal(e.Start(":" + cfg.Server.Port))
 }

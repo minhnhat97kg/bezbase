@@ -1,4 +1,5 @@
 // PermissionService: check if user has permission for resource/action using AuthContext
+import { PERMISSION_WILDCARDS } from '../constants';
 
 /**
  * Checks if the user has a specific permission.
@@ -15,8 +16,8 @@ export function hasPermission(permissions, resource, action) {
     p = { role, resource: res, action: act };
 
     // Support wildcard '*' for resource or action
-    const resourceMatch = p.resource === resource || p.resource === '*';
-    const actionMatch = p.action === action || p.action === '*';
+    const resourceMatch = p.resource === resource || p.resource === PERMISSION_WILDCARDS.ALL;
+    const actionMatch = p.action === action || p.action === PERMISSION_WILDCARDS.ALL;
     return resourceMatch && actionMatch;
   });
 }

@@ -4,6 +4,7 @@ import { useAuth } from '../hooks/useAuth';
 import { useTranslation } from 'react-i18next';
 import Icon from './common/Icons';
 import { hasPermission } from '../services/permissionService';
+import { RESOURCES, ACTIONS } from '../constants';
 
 const Sidebar = ({ sidebarOpen, setSidebarOpen }) => {
   const { user, permissions, logout } = useAuth();
@@ -19,29 +20,29 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen }) => {
       name: t('navigation.dashboard'),
       href: '/dashboard',
       icon: <Icon name="dashboard" />,
-      resource: 'dashboard',
-      action: 'read',
+      resource: RESOURCES.DASHBOARD,
+      action: ACTIONS.READ,
     },
     {
       name: t('navigation.profile'),
       href: '/profile',
       icon: <Icon name="user" />,
-      resource: 'profile',
-      action: 'read',
+      resource: RESOURCES.PROFILE,
+      action: ACTIONS.READ,
     },
     {
       name: t('users.title'),
       href: '/users',
       icon: <Icon name="users" />,
-      resource: 'users',
-      action: 'read',
+      resource: RESOURCES.USERS,
+      action: ACTIONS.READ,
     },
     {
       name: t('roles.title'),
       href: '/roles',
       icon: <Icon name="shield" />,
-      resource: 'roles',
-      action: 'read',
+      resource: RESOURCES.ROLES,
+      action: ACTIONS.READ,
     },
   ];
 
