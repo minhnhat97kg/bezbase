@@ -4,7 +4,6 @@ import (
 	"bezbase/internal/models"
 	"bezbase/internal/pkg/contextx"
 	"errors"
-	"fmt"
 
 	"gorm.io/gorm"
 )
@@ -50,7 +49,7 @@ func (r *contextualPermissionRepository) GetByRoleIDAndContext(ctx contextx.Cont
 	return permissions, err
 }
 
-func (r *contextualPermissionRepository) GetEffectivePermissions(ctx contextx.Contextx, roleID uint, orgID *uint) ([]models.ContextualPermission, error) {
+func (r *contextualPermissionRepository) GetEffectivePermissions(ctx contextx.Contextx, roleID uint) ([]models.ContextualPermission, error) {
 	var permissions []models.ContextualPermission
 
 	query := `
@@ -70,18 +69,10 @@ func (r *contextualPermissionRepository) GetEffectivePermissions(ctx contextx.Co
 		FROM contextual_permissions cp
 		JOIN role_hierarchy rh ON cp.role_id = rh.id
 		WHERE cp.deleted_at IS NULL
+		ORDER BY rh.level, cp.resource, cp.action
 	`
 
-	args := []interface{}{roleID}
-
-	if orgID != nil {
-		query += ` AND (cp.context_type = 'organization' AND cp.context_value = ? OR cp.context_type IS NULL OR cp.context_type = '')`
-		args = append(args, fmt.Sprintf("%d", *orgID))
-	}
-
-	query += ` ORDER BY rh.level, cp.resource, cp.action`
-
-	err := ctx.GetTxn(r.db).Raw(query, args...).Scan(&permissions).Error
+	err := ctx.GetTxn(r.db).Raw(query, roleID).Scan(&permissions).Error
 	return permissions, err
 }
 

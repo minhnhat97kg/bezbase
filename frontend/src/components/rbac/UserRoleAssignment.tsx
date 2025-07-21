@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { rbacService, userService } from '../../services/api';
+import { userService } from '../../services/api';
+import { rbacService } from '../../services/rbacService';
 import Icon from '../common/Icons';
 
 const UserRoleAssignment = ({ roles, onRefresh }) => {
@@ -57,10 +58,10 @@ const UserRoleAssignment = ({ roles, onRefresh }) => {
       setLoading(true);
       setError(null);
       const response = await rbacService.getUserRoles(userId);
-      setUserRoles(response.data?.roles || []);
+      setUserRoles(response.data || []);
       
       // Filter out roles that user already has
-      const assignedRoleNames = response.data?.roles || [];
+      const assignedRoleNames = response.data || [];
       const available = roles.filter(role => !assignedRoleNames.includes(role.name));
       setAvailableRoles(available);
     } catch (err) {
@@ -399,7 +400,7 @@ const PermissionChecker = ({ userId }) => {
 
     try {
       setLoading(true);
-      const response = await rbacService.checkPermission(userId, resource, action);
+      const response = await rbacService.checkUserPermission(userId, resource, action);
       setResult(response.data.allowed);
     } catch (err) {
       setResult(false);

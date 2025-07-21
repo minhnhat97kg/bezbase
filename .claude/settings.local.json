@@ -29,7 +29,15 @@
       "Bash(go test:*)",
       "Bash(node:*)",
       "Bash(npm run:*)",
-      "Bash(grep:*)"
+      "Bash(grep:*)",
+      "Bash(make test:*)",
+      "Bash(./test_rbac.sh:*)",
+      "Bash(PGPASSWORD=bezbase_password psql:*)",
+      "Bash(kill:*)",
+      "Bash(make:*)",
+      "Bash(DANGEROUSLY_DISABLE_HOST_CHECK=true npm start)",
+      "Bash(npm:*)",
+      "Bash(env)"
     ],
     "deny": []
   }

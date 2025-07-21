@@ -5,7 +5,6 @@ import (
 	"strconv"
 
 	"bezbase/internal/dto"
-	"bezbase/internal/middleware"
 	"bezbase/internal/models"
 	"bezbase/internal/pkg/contextx"
 	"bezbase/internal/repository"
@@ -52,14 +51,13 @@ func NewAdvancedRBACHandler(
 // @Failure 500 {object} dto.ErrorResponse
 // @Router /api/v1/rbac/roles/from-template [post]
 func (h *AdvancedRBACHandler) CreateRoleFromTemplate(c echo.Context) error {
-	userID := middleware.GetUserIDFromContext(c)
-	if userID == nil {
+	userIDInterface := c.Get("user_id")
+	if userIDInterface == nil {
 		return c.JSON(http.StatusUnauthorized, dto.ErrorResponse{
 			Message: "Authentication required",
 		})
 	}
-
-	orgID := middleware.GetOrganizationIDFromContext(c)
+	_ = userIDInterface.(uint)
 
 	var req CreateRoleFromTemplateRequest
 	if err := c.Bind(&req); err != nil {
@@ -75,7 +73,7 @@ func (h *AdvancedRBACHandler) CreateRoleFromTemplate(c echo.Context) error {
 		})
 	}
 
-	role, err := h.rbacService.CreateRoleFromTemplate(req.TemplateID, orgID, req.CustomName)
+	role, err := h.rbacService.CreateRoleFromTemplate(req.TemplateID, req.CustomName)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, dto.ErrorResponse{
 			Message: "Failed to create role from template",
@@ -100,14 +98,15 @@ func (h *AdvancedRBACHandler) CreateRoleFromTemplate(c echo.Context) error {
 // @Failure 500 {object} dto.ErrorResponse
 // @Router /api/v1/rbac/roles/{id}/parent [put]
 func (h *AdvancedRBACHandler) SetRoleParent(c echo.Context) error {
-	userID := middleware.GetUserIDFromContext(c)
-	if userID == nil {
+	userIDInterface := c.Get("user_id")
+	if userIDInterface == nil {
 		return c.JSON(http.StatusUnauthorized, dto.ErrorResponse{
 			Message: "Authentication required",
 		})
 	}
+	_ = userIDInterface.(uint)
 
-	roleIDStr := c.Param("id")
+	roleIDStr := c.Param("role_id")
 	roleID, err := strconv.ParseUint(roleIDStr, 10, 32)
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, dto.ErrorResponse{
@@ -145,28 +144,18 @@ func (h *AdvancedRBACHandler) SetRoleParent(c echo.Context) error {
 // @Failure 401 {object} dto.ErrorResponse
 // @Failure 500 {object} dto.ErrorResponse
 // @Router /api/v1/rbac/roles [get]
-func (h *AdvancedRBACHandler) GetRolesByOrganization(c echo.Context) error {
-	userID := middleware.GetUserIDFromContext(c)
-	if userID == nil {
+func (h *AdvancedRBACHandler) GetAllRoles(c echo.Context) error {
+	userIDInterface := c.Get("user_id")
+	if userIDInterface == nil {
 		return c.JSON(http.StatusUnauthorized, dto.ErrorResponse{
 			Message: "Authentication required",
 		})
 	}
+	_ = userIDInterface.(uint)
 
-	var orgID *uint
-	if orgIDStr := c.QueryParam("org_id"); orgIDStr != "" {
-		if id, err := strconv.ParseUint(orgIDStr, 10, 32); err == nil {
-			orgIDValue := uint(id)
-			orgID = &orgIDValue
-		}
-	}
-
-	// If no org_id provided, try to get from context
-	if orgID == nil {
-		orgID = middleware.GetOrganizationIDFromContext(c)
-	}
-
-	roles, err := h.rbacService.GetRolesByOrganization(orgID)
+	// Use the existing GetActiveRoles method from RBACService
+	ctx := contextx.Background()
+	roles, err := h.rbacService.GetActiveRoles(ctx)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, dto.ErrorResponse{
 			Message: "Failed to get roles",
@@ -223,12 +212,13 @@ func (h *AdvancedRBACHandler) GetRoleTemplates(c echo.Context) error {
 // @Router /api/v1/rbac/contextual-permissions [post]
 func (h *AdvancedRBACHandler) CreateContextualPermission(c echo.Context) error {
 	ctxx := contextx.NewWithRequestContext(c)
-	userID := middleware.GetUserIDFromContext(c)
-	if userID == nil {
+	userIDInterface := c.Get("user_id")
+	if userIDInterface == nil {
 		return c.JSON(http.StatusUnauthorized, dto.ErrorResponse{
 			Message: "Authentication required",
 		})
 	}
+	_ = userIDInterface.(uint)
 
 	var req CreateContextualPermissionRequest
 	if err := c.Bind(&req); err != nil {
@@ -237,10 +227,23 @@ func (h *AdvancedRBACHandler) CreateContextualPermission(c echo.Context) error {
 		})
 	}
 
-	if err := c.Validate(&req); err != nil {
+	// Basic validation
+	if req.RoleID == 0 {
 		return c.JSON(http.StatusBadRequest, dto.ErrorResponse{
 			Message: "Validation failed",
-			Details: err.Error(),
+			Details: "role_id is required",
+		})
+	}
+	if req.Resource == "" {
+		return c.JSON(http.StatusBadRequest, dto.ErrorResponse{
+			Message: "Validation failed",
+			Details: "resource is required",
+		})
+	}
+	if req.Action == "" {
+		return c.JSON(http.StatusBadRequest, dto.ErrorResponse{
+			Message: "Validation failed",
+			Details: "action is required",
 		})
 	}
 
@@ -276,12 +279,13 @@ func (h *AdvancedRBACHandler) CreateContextualPermission(c echo.Context) error {
 // @Failure 500 {object} dto.ErrorResponse
 // @Router /api/v1/rbac/users/{userId}/effective-permissions [get]
 func (h *AdvancedRBACHandler) GetEffectivePermissions(c echo.Context) error {
-	requestingUserID := middleware.GetUserIDFromContext(c)
-	if requestingUserID == nil {
+	requestingUserIDInterface := c.Get("user_id")
+	if requestingUserIDInterface == nil {
 		return c.JSON(http.StatusUnauthorized, dto.ErrorResponse{
 			Message: "Authentication required",
 		})
 	}
+	_ = requestingUserIDInterface.(uint)
 
 	userIDStr := c.Param("userId")
 	userID, err := strconv.ParseUint(userIDStr, 10, 32)
@@ -291,59 +295,19 @@ func (h *AdvancedRBACHandler) GetEffectivePermissions(c echo.Context) error {
 		})
 	}
 
-	var orgID *uint
-	if orgIDStr := c.QueryParam("org_id"); orgIDStr != "" {
-		if id, err := strconv.ParseUint(orgIDStr, 10, 32); err == nil {
-			orgIDValue := uint(id)
-			orgID = &orgIDValue
-		}
-	}
-
-	// If no org_id provided, try to get from context
-	if orgID == nil {
-		orgID = middleware.GetOrganizationIDFromContext(c)
-	}
-
-	// Get user's roles in organization context
-	roles, err := h.rbacService.GetUserRolesInOrganization(uint(userID), orgID)
+	// Get user permissions using the standard RBAC service
+	ctx := contextx.NewWithRequestContext(c)
+	userPermissions, err := h.rbacService.GetPermissionsForUser(ctx, uint(userID))
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, dto.ErrorResponse{
-			Message: "Failed to get user roles",
+			Message: "Failed to get user permissions",
 			Details: err.Error(),
 		})
 	}
 
-	// Collect all effective permissions
-	var allPermissions []models.ContextualPermission
-	for _, role := range roles {
-		// Add special rule: if role is 'agent', grant 'agent:access' permission
-		if role.Name == "agent" {
-			allPermissions = append(allPermissions, models.ContextualPermission{
-				RoleID:       role.ID,
-				Resource:     "agent",
-				Action:       "access",
-				ContextType:  "organization",
-				ContextValue: orgIDString(orgID),
-				IsGranted:    true,
-			})
-		}
-		permissions, err := h.contextualPermRepo.GetEffectivePermissions(contextx.NewWithRequestContext(c), role.ID, orgID)
-		if err != nil {
-			continue
-		}
-		allPermissions = append(allPermissions, permissions...)
-	}
-
-	return c.JSON(http.StatusOK, allPermissions)
+	return c.JSON(http.StatusOK, userPermissions)
 }
 
-// orgIDString returns the string value of orgID or empty string if nil
-func orgIDString(orgID *uint) string {
-	if orgID == nil {
-		return ""
-	}
-	return strconv.FormatUint(uint64(*orgID), 10)
-}
 
 // GetRoleHierarchy gets the role hierarchy for a role
 // @Summary Get role hierarchy
@@ -356,7 +320,7 @@ func orgIDString(orgID *uint) string {
 // @Failure 500 {object} dto.ErrorResponse
 // @Router /api/v1/rbac/roles/{id}/hierarchy [get]
 func (h *AdvancedRBACHandler) GetRoleHierarchy(c echo.Context) error {
-	roleIDStr := c.Param("id")
+	roleIDStr := c.Param("role_id")
 	roleID, err := strconv.ParseUint(roleIDStr, 10, 32)
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, dto.ErrorResponse{
@@ -389,6 +353,46 @@ func (h *AdvancedRBACHandler) GetRoleHierarchy(c echo.Context) error {
 	}
 
 	return c.JSON(http.StatusOK, response)
+}
+
+// GetEligibleParentRoles gets roles that can be set as parent for a role
+// @Summary Get eligible parent roles
+// @Description Get roles that can be safely set as parent without creating circular dependencies
+// @Tags Advanced RBAC
+// @Produce json
+// @Param id path int true "Role ID"
+// @Success 200 {array} models.Role
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 401 {object} dto.ErrorResponse
+// @Failure 500 {object} dto.ErrorResponse
+// @Router /api/v1/rbac/roles/{id}/eligible-parents [get]
+func (h *AdvancedRBACHandler) GetEligibleParentRoles(c echo.Context) error {
+	userIDInterface := c.Get("user_id")
+	if userIDInterface == nil {
+		return c.JSON(http.StatusUnauthorized, dto.ErrorResponse{
+			Message: "Authentication required",
+		})
+	}
+	_ = userIDInterface.(uint)
+
+	roleIDStr := c.Param("role_id")
+	roleID, err := strconv.ParseUint(roleIDStr, 10, 32)
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, dto.ErrorResponse{
+			Message: "Invalid role ID",
+		})
+	}
+
+	ctx := contextx.Background()
+	eligibleRoles, err := h.rbacService.GetEligibleParentRoles(ctx, uint(roleID))
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, dto.ErrorResponse{
+			Message: "Failed to get eligible parent roles",
+			Details: err.Error(),
+		})
+	}
+
+	return c.JSON(http.StatusOK, eligibleRoles)
 }
 
 // Request/Response DTOs

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { userService } from '../services/api';
+import { rbacService } from '../services/rbacService';
 import Table from '../components/common/Table';
 import Icon from '../components/common/Icons';
 import { useAuth } from '../hooks/useAuth';
@@ -356,10 +357,29 @@ const CreateUserModal = ({ onClose, onSuccess }) => {
     bio: '',
     location: '',
     website: '',
-    phone: ''
+    phone: '',
+    roles: []
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [availableRoles, setAvailableRoles] = useState([]);
+  const [rolesLoading, setRolesLoading] = useState(false);
+
+  // Fetch available roles on component mount
+  useEffect(() => {
+    const fetchRoles = async () => {
+      try {
+        setRolesLoading(true);
+        const response = await rbacService.getRoles();
+        setAvailableRoles(response.data || []);
+      } catch (err) {
+        console.error('Failed to fetch roles:', err);
+      } finally {
+        setRolesLoading(false);
+      }
+    };
+    fetchRoles();
+  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -367,7 +387,21 @@ const CreateUserModal = ({ onClose, onSuccess }) => {
     setError('');
 
     try {
-      await userService.createUser(formData);
+      // Create the user first
+      const createResponse = await userService.createUser(formData);
+      const newUserId = createResponse.data?.id || createResponse.data?.user?.id;
+      
+      // If user was created successfully and roles were selected, assign roles
+      if (newUserId && formData.roles.length > 0) {
+        for (const roleName of formData.roles) {
+          try {
+            await rbacService.assignRole({ user_id: newUserId, role: roleName });
+          } catch (roleErr) {
+            console.error(`Failed to assign role ${roleName}:`, roleErr);
+          }
+        }
+      }
+      
       onSuccess();
     } catch (err) {
       setError(err.response?.data?.message || t('users.errors.createFailed'));
@@ -379,6 +413,16 @@ const CreateUserModal = ({ onClose, onSuccess }) => {
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleRoleChange = (e) => {
+    const { value, checked } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      roles: checked 
+        ? [...prev.roles, value]
+        : prev.roles.filter(role => role !== value)
+    }));
   };
 
   return (
@@ -557,6 +601,39 @@ const CreateUserModal = ({ onClose, onSuccess }) => {
               />
             </div>
 
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Roles
+              </label>
+              {rolesLoading ? (
+                <div className="text-sm text-gray-500">Loading roles...</div>
+              ) : (
+                <div className="space-y-2 max-h-32 overflow-y-auto border border-gray-300 dark:border-gray-600 rounded-md p-3">
+                  {availableRoles.length === 0 ? (
+                    <div className="text-sm text-gray-500">No roles available</div>
+                  ) : (
+                    availableRoles.map((role) => (
+                      <label key={role.name} className="flex items-center space-x-2">
+                        <input
+                          type="checkbox"
+                          value={role.name}
+                          checked={formData.roles.includes(role.name)}
+                          onChange={handleRoleChange}
+                          className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                        />
+                        <span className="text-sm text-gray-700 dark:text-gray-300">
+                          {role.name}
+                          {role.description && (
+                            <span className="text-gray-500 ml-1">- {role.description}</span>
+                          )}
+                        </span>
+                      </label>
+                    ))
+                  )}
+                </div>
+              )}
+            </div>
+
             <div className="flex justify-end space-x-3 pt-4">
               <button
                 type="button"
@@ -596,6 +673,34 @@ const EditUserModal = ({ user, onClose, onSuccess }) => {
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [availableRoles, setAvailableRoles] = useState([]);
+  const [currentUserRoles, setCurrentUserRoles] = useState([]);
+  const [selectedRoles, setSelectedRoles] = useState([]);
+  const [rolesLoading, setRolesLoading] = useState(false);
+
+  // Fetch available roles and current user roles on component mount
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setRolesLoading(true);
+        
+        // Fetch available roles
+        const rolesResponse = await rbacService.getRoles();
+        setAvailableRoles(rolesResponse.data || []);
+        
+        // Fetch current user roles
+        const userRolesResponse = await rbacService.getUserRoles(user.id);
+        const currentRoles = userRolesResponse.data || user.roles || [];
+        setCurrentUserRoles(currentRoles);
+        setSelectedRoles(currentRoles);
+      } catch (err) {
+        console.error('Failed to fetch roles:', err);
+      } finally {
+        setRolesLoading(false);
+      }
+    };
+    fetchData();
+  }, [user.id, user.roles]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -603,7 +708,31 @@ const EditUserModal = ({ user, onClose, onSuccess }) => {
     setError('');
 
     try {
+      // Update user basic information
       await userService.updateUser(user.id, formData);
+      
+      // Handle role changes
+      const rolesToAdd = selectedRoles.filter(role => !currentUserRoles.includes(role));
+      const rolesToRemove = currentUserRoles.filter(role => !selectedRoles.includes(role));
+      
+      // Add new roles
+      for (const roleName of rolesToAdd) {
+        try {
+          await rbacService.assignRole({ user_id: user.id, role: roleName });
+        } catch (roleErr) {
+          console.error(`Failed to assign role ${roleName}:`, roleErr);
+        }
+      }
+      
+      // Remove roles
+      for (const roleName of rolesToRemove) {
+        try {
+          await rbacService.removeRole({ user_id: user.id, role: roleName });
+        } catch (roleErr) {
+          console.error(`Failed to remove role ${roleName}:`, roleErr);
+        }
+      }
+      
       onSuccess();
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to update user');
@@ -615,6 +744,15 @@ const EditUserModal = ({ user, onClose, onSuccess }) => {
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleRoleChange = (e) => {
+    const { value, checked } = e.target;
+    setSelectedRoles(prev => 
+      checked 
+        ? [...prev, value]
+        : prev.filter(role => role !== value)
+    );
   };
 
   return (
@@ -772,6 +910,45 @@ const EditUserModal = ({ user, onClose, onSuccess }) => {
                 onChange={handleChange}
                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white"
               />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Roles
+              </label>
+              {rolesLoading ? (
+                <div className="text-sm text-gray-500">Loading roles...</div>
+              ) : (
+                <div className="space-y-2 max-h-32 overflow-y-auto border border-gray-300 dark:border-gray-600 rounded-md p-3">
+                  {availableRoles.length === 0 ? (
+                    <div className="text-sm text-gray-500">No roles available</div>
+                  ) : (
+                    availableRoles.map((role) => (
+                      <label key={role.name} className="flex items-center space-x-2">
+                        <input
+                          type="checkbox"
+                          value={role.name}
+                          checked={selectedRoles.includes(role.name)}
+                          onChange={handleRoleChange}
+                          className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                        />
+                        <span className="text-sm text-gray-700 dark:text-gray-300">
+                          {role.name}
+                          {role.description && (
+                            <span className="text-gray-500 ml-1">- {role.description}</span>
+                          )}
+                        </span>
+                      </label>
+                    ))
+                  )}
+                </div>
+              )}
+              {selectedRoles.length !== currentUserRoles.length || 
+               !selectedRoles.every(role => currentUserRoles.includes(role)) ? (
+                <div className="mt-2 text-xs text-blue-600">
+                  Changes will be applied when you save
+                </div>
+              ) : null}
             </div>
 
             <div className="flex justify-end space-x-3 pt-4">

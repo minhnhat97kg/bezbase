@@ -217,34 +217,42 @@ func (r *RBACService) CheckPermission(userID uint, resource, action string) (boo
 	if err != nil {
 		return false, err
 	}
-	// If user has no roles, check as if they have 'user' role
+	
+	// If user has no roles, assign default 'user' role automatically
 	if len(roles) == 0 {
-		ok, err := r.enforcer.Enforce("user", resource, action)
-		if err != nil {
-			return false, err
+		if err := r.AssignDefaultRoleToUser(contextx.Background(), userID); err != nil {
+			// If assignment fails, fall back to checking with default role
+			roles = append(roles, "user")
+		} else {
+			// Re-fetch roles after assignment
+			roles, err = r.enforcer.GetRolesForUser(user)
+			if err != nil {
+				return false, err
+			}
 		}
-		if ok {
-			return true, nil
-		}
 	}
-	// Check as the user
-	ok, err := r.enforcer.Enforce(user, resource, action)
-	if err != nil {
-		return false, err
-	}
-	if ok {
-		return true, nil
-	}
-	// Check as each role
-	for _, role := range roles {
-		ok, err := r.enforcer.Enforce(role, resource, action)
+	
+	// Check as each role (including inherited permissions)
+	for _, roleName := range roles {
+		// Check direct permission
+		ok, err := r.enforcer.Enforce(roleName, resource, action)
 		if err != nil {
 			continue
 		}
 		if ok {
 			return true, nil
 		}
+		
+		// Check inherited permissions from parent roles
+		// First get the role by name to get its ID
+		roleObj, err := r.roleRepo.GetByName(contextx.Background(), roleName)
+		if err == nil {
+			if hasInheritedPermission, err := r.checkInheritedPermissions(roleObj.ID, resource, action); err == nil && hasInheritedPermission {
+				return true, nil
+			}
+		}
 	}
+	
 	return false, nil
 }
 
@@ -639,87 +647,27 @@ func (r *RBACService) ReloadPolicy() error {
 	return r.enforcer.LoadPolicy()
 }
 
-// Check permission with organization context
-func (r *RBACService) CheckPermissionWithContext(userID uint, resource, action string, orgID *uint) (bool, error) {
-	// Get user's roles in the organization context
-	userRoles, err := r.GetUserRolesInOrganization(userID, orgID)
-	if err != nil {
-		return false, err
-	}
-
-	// Check permissions for each role
-	for _, role := range userRoles {
-		// Check direct role permissions
-		ok, err := r.enforcer.Enforce(role.Name, resource, action)
-		if err != nil {
-			continue
-		}
-		if ok {
-			return true, nil
-		}
-
-		// Check contextual permissions
-		hasContextualPermission, err := r.checkContextualPermissions(role.ID, resource, action, orgID)
-		if err != nil {
-			continue
-		}
-		if hasContextualPermission {
-			return true, nil
-		}
-
-		// Check inherited permissions from parent roles
-		hasInheritedPermission, err := r.checkInheritedPermissions(role.ID, resource, action, orgID)
-		if err != nil {
-			continue
-		}
-		if hasInheritedPermission {
-			return true, nil
-		}
-	}
-
-	return false, nil
+// Check permission with contextual information (simplified without organization context)
+func (r *RBACService) CheckPermissionWithContext(userID uint, resource, action string) (bool, error) {
+	// Use the standard permission check since we removed organization context
+	return r.CheckPermission(userID, resource, action)
 }
 
-// Get user roles in organization context
-func (r *RBACService) GetUserRolesInOrganization(userID uint, orgID *uint) ([]models.Role, error) {
-	var roles []models.Role
-	query := r.db.Table("casbin_rules").
-		Select("roles.*").
-		Joins("JOIN roles ON casbin_rules.v1 = roles.name").
-		Where("casbin_rules.ptype = 'g' AND casbin_rules.v0 = ?", fmt.Sprintf("user:%d", userID))
-
-	if orgID != nil {
-		// Include both global roles and organization-specific roles
-		query = query.Where("roles.org_id IS NULL OR roles.org_id = ?", *orgID)
-	} else {
-		// Only global roles
-		query = query.Where("roles.org_id IS NULL")
-	}
-
-	err := query.Find(&roles).Error
-	return roles, err
-}
 
 // Check contextual permissions
-func (r *RBACService) checkContextualPermissions(roleID uint, resource, action string, orgID *uint) (bool, error) {
+func (r *RBACService) checkContextualPermissions(roleID uint, resource, action string) (bool, error) {
 	var count int64
 	query := r.db.Model(&models.ContextualPermission{}).
 		Where("role_id = ? AND resource = ? AND action = ? AND is_granted = ?",
 			roleID, resource, action, true)
 
-	if orgID != nil {
-		query = query.Where("(context_type = 'organization' AND context_value = ?) OR context_type IS NULL OR context_type = ''",
-			fmt.Sprintf("%d", *orgID))
-	} else {
-		query = query.Where("context_type IS NULL OR context_type = ''")
-	}
 
 	err := query.Count(&count).Error
 	return count > 0, err
 }
 
 // Check inherited permissions from parent roles
-func (r *RBACService) checkInheritedPermissions(roleID uint, resource, action string, orgID *uint) (bool, error) {
+func (r *RBACService) checkInheritedPermissions(roleID uint, resource, action string) (bool, error) {
 	// Get all parent roles in the hierarchy
 	parentRoles, err := models.GetAllParentRoles(r.db, roleID)
 	if err != nil {
@@ -737,7 +685,7 @@ func (r *RBACService) checkInheritedPermissions(roleID uint, resource, action st
 		}
 
 		// Check contextual permissions for parent role
-		hasContextualPermission, err := r.checkContextualPermissions(parentRole.ID, resource, action, orgID)
+		hasContextualPermission, err := r.checkContextualPermissions(parentRole.ID, resource, action)
 		if err != nil {
 			continue
 		}
@@ -750,7 +698,7 @@ func (r *RBACService) checkInheritedPermissions(roleID uint, resource, action st
 }
 
 // Create role from template
-func (r *RBACService) CreateRoleFromTemplate(templateID uint, orgID *uint, customName string) (*models.Role, error) {
+func (r *RBACService) CreateRoleFromTemplate(templateID uint, customName string) (*models.Role, error) {
 	var template models.RoleTemplate
 	if err := r.db.First(&template, templateID).Error; err != nil {
 		return nil, fmt.Errorf("template not found: %w", err)
@@ -760,9 +708,6 @@ func (r *RBACService) CreateRoleFromTemplate(templateID uint, orgID *uint, custo
 	if customName != "" {
 		roleName = customName
 	}
-	if orgID != nil {
-		roleName = fmt.Sprintf("%s_org_%d", roleName, *orgID)
-	}
 
 	role := &models.Role{
 		Name:           roleName,
@@ -770,7 +715,6 @@ func (r *RBACService) CreateRoleFromTemplate(templateID uint, orgID *uint, custo
 		Description:    template.Description,
 		IsSystem:       false,
 		IsActive:       true,
-		OrgID:          orgID,
 		HierarchyLevel: 2, // Templates create level 2 roles by default
 	}
 
@@ -792,20 +736,6 @@ func (r *RBACService) CreateRoleFromTemplate(templateID uint, orgID *uint, custo
 	return createdRole, nil
 }
 
-// Get roles by organization
-func (r *RBACService) GetRolesByOrganization(orgID *uint) ([]models.Role, error) {
-	var roles []models.Role
-	query := r.db.Where("is_active = ?", true)
-
-	if orgID != nil {
-		query = query.Where("org_id = ? OR org_id IS NULL", *orgID)
-	} else {
-		query = query.Where("org_id IS NULL")
-	}
-
-	err := query.Order("hierarchy_level, display_name").Find(&roles).Error
-	return roles, err
-}
 
 // Update role hierarchy
 func (r *RBACService) SetRoleParent(childRoleID uint, parentRoleID *uint) error {
@@ -824,26 +754,160 @@ func (r *RBACService) SetRoleParent(childRoleID uint, parentRoleID *uint) error 
 			return fmt.Errorf("parent role not found: %w", err)
 		}
 
-		// Prevent circular dependencies
-		if parentRole.ParentRoleID != nil && *parentRole.ParentRoleID == childRoleID {
-			return fmt.Errorf("circular dependency detected")
+		// Comprehensive circular dependency check
+		if err := r.validateRoleHierarchy(childRoleID, *parentRoleID); err != nil {
+			return err
 		}
 
 		// Update hierarchy level
 		childRole.HierarchyLevel = parentRole.HierarchyLevel + 1
-
-		// Create hierarchy relationship
-		if err := models.CreateRoleHierarchy(r.db, *parentRoleID, childRoleID); err != nil {
-			return err
-		}
 	} else {
-		// Remove parent relationship
-		if err := models.RemoveRoleHierarchy(r.db, childRoleID); err != nil {
-			return err
-		}
 		childRole.HierarchyLevel = 0
 	}
 
+	// Simply update the parent_role_id field
 	childRole.ParentRoleID = parentRoleID
 	return r.db.Save(childRole).Error
+}
+
+// GetEligibleParentRoles returns roles that can be safely set as parent for the given role
+func (r *RBACService) GetEligibleParentRoles(ctx contextx.Contextx, roleID uint) ([]models.Role, error) {
+	// Get all active roles
+	var allRoles []models.Role
+	if err := r.db.Where("is_active = ? AND id != ?", true, roleID).Find(&allRoles).Error; err != nil {
+		return nil, err
+	}
+
+	// Get the current role to understand its position in hierarchy (for future enhancements)
+	_, err := r.GetRoleByID(ctx, roleID)
+	if err != nil {
+		return nil, err
+	}
+
+	// Build a map of role relationships for easier traversal
+	childMap := make(map[uint][]uint) // parent_id -> []child_ids
+	for _, role := range allRoles {
+		if role.ParentRoleID != nil {
+			childMap[*role.ParentRoleID] = append(childMap[*role.ParentRoleID], role.ID)
+		}
+	}
+
+	// Function to check if a role is a descendant of another role
+	isDescendant := func(potentialDescendant, ancestor uint) bool {
+		visited := make(map[uint]bool)
+		var checkDescendants func(uint) bool
+		checkDescendants = func(currentRole uint) bool {
+			if visited[currentRole] {
+				return false // Prevent infinite loops
+			}
+			visited[currentRole] = true
+			
+			children := childMap[currentRole]
+			for _, child := range children {
+				if child == potentialDescendant {
+					return true
+				}
+				if checkDescendants(child) {
+					return true
+				}
+			}
+			return false
+		}
+		return checkDescendants(ancestor)
+	}
+
+	// Filter out ineligible roles
+	var eligibleRoles []models.Role
+	for _, role := range allRoles {
+		// Cannot assign system roles as parents
+		if role.IsSystem {
+			continue
+		}
+		
+		// Cannot assign self as parent
+		if role.ID == roleID {
+			continue
+		}
+		
+		// Cannot assign descendants as parents (would create circular dependency)
+		if isDescendant(role.ID, roleID) {
+			continue
+		}
+		
+		// Cannot assign roles that would create a hierarchy level > 10 (arbitrary limit)
+		if role.HierarchyLevel >= 9 {
+			continue
+		}
+		
+		eligibleRoles = append(eligibleRoles, role)
+	}
+
+	return eligibleRoles, nil
+}
+
+// validateRoleHierarchy checks if setting parentRoleID as parent of childRoleID would create circular dependency
+func (r *RBACService) validateRoleHierarchy(childRoleID, parentRoleID uint) error {
+	// Cannot set self as parent
+	if childRoleID == parentRoleID {
+		return fmt.Errorf("cannot set role as its own parent")
+	}
+
+	// Check if parent role would become descendant of child role
+	visited := make(map[uint]bool)
+	var checkAncestors func(uint) bool
+	checkAncestors = func(currentRoleID uint) bool {
+		if visited[currentRoleID] {
+			return false // Prevent infinite loops
+		}
+		visited[currentRoleID] = true
+
+		var role models.Role
+		if err := r.db.First(&role, currentRoleID).Error; err != nil {
+			return false
+		}
+
+		if role.ParentRoleID == nil {
+			return false
+		}
+
+		if *role.ParentRoleID == childRoleID {
+			return true // Found circular dependency
+		}
+
+		return checkAncestors(*role.ParentRoleID)
+	}
+
+	if checkAncestors(parentRoleID) {
+		return fmt.Errorf("circular dependency detected: parent role %d is a descendant of child role %d", parentRoleID, childRoleID)
+	}
+
+	// Check depth limit
+	depth := 0
+	currentRoleID := parentRoleID
+	visited = make(map[uint]bool)
+	
+	for currentRoleID != 0 && depth < 10 {
+		if visited[currentRoleID] {
+			return fmt.Errorf("circular dependency detected in role hierarchy")
+		}
+		visited[currentRoleID] = true
+
+		var role models.Role
+		if err := r.db.First(&role, currentRoleID).Error; err != nil {
+			break
+		}
+
+		if role.ParentRoleID == nil {
+			break
+		}
+
+		currentRoleID = *role.ParentRoleID
+		depth++
+	}
+
+	if depth >= 10 {
+		return fmt.Errorf("role hierarchy depth limit exceeded (max 10 levels)")
+	}
+
+	return nil
 }

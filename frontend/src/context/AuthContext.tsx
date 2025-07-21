@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import { authService, userService } from "../services/api";
+import { rbacService } from "../services/rbacService";
 
 interface User {
   id: string;
@@ -41,29 +42,43 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [loading, setLoading] = useState<boolean>(true);
 
   useEffect(() => {
-    const token = localStorage.getItem("token");
-    const savedUser = localStorage.getItem("user");
+    const initializeAuth = async () => {
+      const token = localStorage.getItem("token");
+      const savedUser = localStorage.getItem("user");
 
-    if (token && savedUser) {
-      try {
-        setUser(JSON.parse(savedUser));
-      } catch (error) {
-        console.error("Error parsing saved user:", error);
-        localStorage.removeItem("token");
-        localStorage.removeItem("user");
+      if (token && savedUser) {
+        try {
+          const parsedUser = JSON.parse(savedUser);
+          // Validate the token by fetching user profile
+          try {
+            const response = await userService.getProfile();
+            setUser(response.data);
+            localStorage.setItem("user", JSON.stringify(response.data));
+            await fetchPermissions();
+          } catch (error) {
+            // Token is invalid, clear storage and redirect to login
+            console.error("Token validation failed:", error);
+            localStorage.removeItem("token");
+            localStorage.removeItem("user");
+            setUser(null);
+            setPermissions([]);
+          }
+        } catch (error) {
+          console.error("Error parsing saved user:", error);
+          localStorage.removeItem("token");
+          localStorage.removeItem("user");
+        }
       }
-    }
+      setLoading(false);
+    };
 
-    if (token) {
-      fetchPermissions();
-    }
-    setLoading(false);
+    initializeAuth();
   }, []);
 
   // Fetch permissions if token exists
   const fetchPermissions = async () => {
     try {
-      const res = await userService.getPermissions();
+      const res = await rbacService.getMyPermissions();
       setPermissions(res.data.permissions || []);
     } catch (err) {
       setPermissions([]);

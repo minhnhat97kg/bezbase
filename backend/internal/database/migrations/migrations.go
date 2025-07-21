@@ -670,6 +670,38 @@ func GetMigrations() []*gormigrate.Migration {
 			},
 		},
 		{
+			ID: "20250720_001_remove_organizations",
+			Migrate: func(tx *gorm.DB) error {
+				// Remove foreign key constraints first
+				constraints := []string{
+					"ALTER TABLE roles DROP CONSTRAINT IF EXISTS fk_roles_org_id",
+					"ALTER TABLE users DROP CONSTRAINT IF EXISTS fk_users_current_org_id",
+					"ALTER TABLE organization_invitations DROP CONSTRAINT IF EXISTS fk_organization_invitations_invited_by",
+					"ALTER TABLE organization_invitations DROP CONSTRAINT IF EXISTS fk_organization_invitations_org_id",
+					"ALTER TABLE organization_users DROP CONSTRAINT IF EXISTS fk_organization_users_user_id",
+					"ALTER TABLE organization_users DROP CONSTRAINT IF EXISTS fk_organization_users_org_id",
+				}
+
+				for _, constraint := range constraints {
+					tx.Exec(constraint)
+				}
+
+				// Drop columns from users and roles tables
+				tx.Exec("ALTER TABLE users DROP COLUMN IF EXISTS current_org_id")
+				tx.Exec("ALTER TABLE roles DROP COLUMN IF EXISTS org_id")
+
+				// Drop organization-related tables
+				tx.Migrator().DropTable("organization_invitations", "organization_users", "organizations")
+
+				return nil
+			},
+			Rollback: func(tx *gorm.DB) error {
+				// This rollback would recreate the organization system - complex operation
+				// For now, just return nil as this is meant to be a permanent removal
+				return nil
+			},
+		},
+		{
 			ID: "20250718_001_seed_roles",
 			Migrate: func(tx *gorm.DB) error {
 				// Check if roles already exist, if not create them

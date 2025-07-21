@@ -175,20 +175,25 @@ func (h *RBACHandler) UpdateRole(c echo.Context) error {
 // @Failure 401 {object} map[string]interface{}
 // @Failure 403 {object} map[string]interface{}
 // @Failure 500 {object} map[string]interface{}
-// @Router /v1/rbac/roles/{role} [delete]
+// @Router /v1/rbac/roles/{role_id} [delete]
 func (h *RBACHandler) DeleteRole(c echo.Context) error {
-	role := c.Param("role")
-	if role == "" {
-		return echo.NewHTTPError(http.StatusBadRequest, "Role parameter is required")
+	roleIDStr := c.Param("role_id")
+	if roleIDStr == "" {
+		return echo.NewHTTPError(http.StatusBadRequest, "Role ID parameter is required")
 	}
 
-	if err := h.rbacService.DeleteRole(role); err != nil {
+	roleID, err := strconv.ParseUint(roleIDStr, 10, 32)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, "Invalid role ID")
+	}
+
+	if err := h.rbacService.DeleteRoleByID(uint(roleID)); err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
 	}
 
 	return c.JSON(http.StatusOK, map[string]any{
 		"message": "Role deleted successfully",
-		"role":    role,
+		"role_id": roleID,
 	})
 }
 

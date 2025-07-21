@@ -74,10 +74,6 @@ func main() {
 	contextualPermissionRepo := repository.NewContextualPermissionRepository(db)
 	roleInheritanceRepo := repository.NewRoleInheritanceRepository(db)
 
-	// Organization repositories
-	orgRepo := repository.NewOrganizationRepository(db)
-	orgUserRepo := repository.NewOrganizationUserRepository(db)
-	orgInvitationRepo := repository.NewOrganizationInvitationRepository(db)
 
 	// Initialize services
 	rbacService, err := services.NewRBACService(roleRepo, ruleRepo, db)
@@ -89,13 +85,11 @@ func main() {
 	passwordResetService := services.NewPasswordResetService(userRepo, userInfoRepo, authProviderRepo, passwordResetRepo, emailService)
 	authService := services.NewAuthService(userRepo, userInfoRepo, authProviderRepo, &cfg.Auth, db)
 	userService := services.NewUserService(userRepo, userInfoRepo, authProviderRepo, rbacService, db)
-	orgService := services.NewOrganizationService(orgRepo, orgUserRepo, orgInvitationRepo, userRepo, rbacService, emailService, db)
 
 	// Initialize handlers
 	commonHandler := handlers.NewCommonHandler()
 	rbacHandler := handlers.NewRBACHandler(rbacService)
 	advancedRbacHandler := handlers.NewAdvancedRBACHandler(rbacService, roleTemplateRepo, contextualPermissionRepo, roleInheritanceRepo, db)
-	orgHandler := handlers.NewOrganizationHandler(orgService)
 	userHandler := handlers.NewUserHandler(userService, rbacService)
 	authHandler := handlers.NewAuthHandler(authService)
 	emailVerificationHandler := handlers.NewEmailVerificationHandler(emailVerificationService)
@@ -135,7 +129,6 @@ func main() {
 	apiV1.GET("/profile", userHandler.GetProfile, middleware.RequirePermission(rbacService, models.PermissionViewProfile))
 	apiV1.PUT("/profile", userHandler.UpdateProfile, middleware.RequirePermission(rbacService, models.PermissionEditProfile))
 	apiV1.PUT("/profile/password", userHandler.ChangePassword, middleware.RequirePermission(rbacService, models.PermissionEditProfile))
-	apiV1.GET("/me/permissions", userHandler.GetCurrentUserPermissions)
 
 	// User management routes (admin only)
 	userGroup := apiV1.Group("/users")
@@ -153,10 +146,10 @@ func main() {
 	// Role management
 	rbacGroup.POST("/roles", rbacHandler.CreateRole,
 		middleware.RequirePermission(rbacService, models.PermissionCreateRoles))
-	rbacGroup.GET("/roles", rbacHandler.GetRoles, middleware.RequirePermission(rbacService, models.PermissionViewRoles))
+	rbacGroup.GET("/roles", advancedRbacHandler.GetAllRoles, middleware.RequirePermission(rbacService, models.PermissionViewRoles))
 	rbacGroup.GET("/roles/:role_id", rbacHandler.GetRole, middleware.RequirePermission(rbacService, models.PermissionViewRoles))
 	rbacGroup.PUT("/roles/:role_id", rbacHandler.UpdateRole, middleware.RequirePermission(rbacService, models.PermissionEditRoles))
-	rbacGroup.DELETE("/roles/:role", rbacHandler.DeleteRole, middleware.RequirePermission(rbacService, models.PermissionDeleteRoles))
+	rbacGroup.DELETE("/roles/:role_id", rbacHandler.DeleteRole, middleware.RequirePermission(rbacService, models.PermissionDeleteRoles))
 	rbacGroup.GET("/roles/:role/users", rbacHandler.GetUsersWithRole, middleware.RequirePermission(rbacService, models.PermissionViewRoles))
 	rbacGroup.GET("/roles/:role/permissions", rbacHandler.GetRolePermissions, middleware.RequirePermission(rbacService, models.PermissionViewRoles))
 
@@ -180,19 +173,15 @@ func main() {
 	rbacGroup.POST("/roles/from-template", advancedRbacHandler.CreateRoleFromTemplate, middleware.RequirePermission(rbacService, models.PermissionCreateRoles))
 	rbacGroup.PUT("/roles/:role_id/parent", advancedRbacHandler.SetRoleParent, middleware.RequirePermission(rbacService, models.PermissionEditRoles))
 	rbacGroup.GET("/roles/:role_id/hierarchy", advancedRbacHandler.GetRoleHierarchy, middleware.RequirePermission(rbacService, models.PermissionViewRoles))
+	rbacGroup.GET("/roles/:role_id/eligible-parents", advancedRbacHandler.GetEligibleParentRoles, middleware.RequirePermission(rbacService, models.PermissionViewRoles))
 
 	// Contextual permissions
 	rbacGroup.POST("/contextual-permissions", advancedRbacHandler.CreateContextualPermission, middleware.RequirePermission(rbacService, models.PermissionCreatePermissions))
 	rbacGroup.GET("/users/:user_id/effective-permissions", advancedRbacHandler.GetEffectivePermissions, middleware.RequirePermission(rbacService, models.PermissionViewPermissions))
+	
+	// Current user permissions
+	rbacGroup.GET("/me/permissions", userHandler.GetCurrentUserPermissions)
 
-	// Organization management routes (TODO: Implement missing handler methods)
-	orgGroup := apiV1.Group("/organizations")
-
-	// Basic organization endpoints that exist
-	orgGroup.POST("", orgHandler.CreateOrganization, middleware.RequirePermission(rbacService, models.PermissionCreateUsers)) // Reuse user permission for now
-	orgGroup.GET("/:id", orgHandler.GetOrganization, middleware.RequirePermission(rbacService, models.PermissionViewUsers))
-
-	// TODO: Add remaining organization endpoints once handler methods are implemented
 
 	// API v2 (future version example)
 	apiV2 := api.Group("/v2")

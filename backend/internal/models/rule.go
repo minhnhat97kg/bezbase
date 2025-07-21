@@ -8,19 +8,20 @@ func (o ResourceType) String() string {
 
 // Define resource types for RBAC
 const (
-	ResourceTypeUser       ResourceType = "users"
-	ResourceTypePost       ResourceType = "posts"
-	ResourceTypeProfile    ResourceType = "profile"
-	ResourceTypeAdmin      ResourceType = "admin"
-	ResourceTypePermission ResourceType = "permissions"
-	ResourceTypeRole       ResourceType = "roles"
-	ResourceTypeDashboard  ResourceType = "dashboard"
-	ResourceTypeSettings   ResourceType = "settings"
-	ResourceTypeReports    ResourceType = "reports"
-	ResourceTypeAudit      ResourceType = "audit"
-	ResourceTypeSystem     ResourceType = "system"
-	ResourceTypeBackup     ResourceType = "backup"
-	ResourceTypeAll        ResourceType = "*"
+	ResourceTypeUser         ResourceType = "users"
+	ResourceTypePost         ResourceType = "posts"
+	ResourceTypeProfile      ResourceType = "profile"
+	ResourceTypeAdmin        ResourceType = "admin"
+	ResourceTypePermission   ResourceType = "permissions"
+	ResourceTypeRole         ResourceType = "roles"
+	ResourceTypeOrganization ResourceType = "organizations"
+	ResourceTypeDashboard    ResourceType = "dashboard"
+	ResourceTypeSettings     ResourceType = "settings"
+	ResourceTypeReports      ResourceType = "reports"
+	ResourceTypeAudit        ResourceType = "audit"
+	ResourceTypeSystem       ResourceType = "system"
+	ResourceTypeBackup       ResourceType = "backup"
+	ResourceTypeAll          ResourceType = "*"
 )
 
 type ActionType string

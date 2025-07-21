@@ -31,13 +31,6 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen }) => {
       action: ACTIONS.READ,
     },
     {
-      name: 'Organizations',
-      href: '/organizations/manage',
-      icon: <Icon name="office" />,
-      resource: 'organizations',
-      action: ACTIONS.READ,
-    },
-    {
       name: t('users.title'),
       href: '/users',
       icon: <Icon name="users" />,

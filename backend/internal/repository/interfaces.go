@@ -60,43 +60,6 @@ type RuleRepository interface {
 	GetPermissions(ctx contextx.Contextx, page, pageSize int, roleFilter, resourceFilter, actionFilter, sortField, sortOrder string) ([]models.Rule, int, error)
 }
 
-// OrganizationRepository defines the interface for organization data access
-type OrganizationRepository interface {
-	GetByID(ctx contextx.Contextx, orgID uint) (*models.Organization, error)
-	GetByIDWithRelations(ctx contextx.Contextx, orgID uint) (*models.Organization, error)
-	GetBySlug(ctx contextx.Contextx, slug string) (*models.Organization, error)
-	GetAll(ctx contextx.Contextx) ([]models.Organization, error)
-	Create(ctx contextx.Contextx, org *models.Organization) error
-	Update(ctx contextx.Contextx, org *models.Organization) error
-	Delete(ctx contextx.Contextx, orgID uint) error
-}
-
-// OrganizationUserRepository defines the interface for organization user data access
-type OrganizationUserRepository interface {
-	GetByID(ctx contextx.Contextx, id uint) (*models.OrganizationUser, error)
-	GetByOrgID(ctx contextx.Contextx, orgID uint) ([]models.OrganizationUser, error)
-	GetByUserID(ctx contextx.Contextx, userID uint) ([]models.OrganizationUser, error)
-	GetByOrgIDAndUserID(ctx contextx.Contextx, orgID uint, userID uint) (*models.OrganizationUser, error)
-	GetByOrgIDAndEmail(ctx contextx.Contextx, orgID uint, email string) (*models.OrganizationUser, error)
-	GetByOrgIDAndRole(ctx contextx.Contextx, orgID uint, role string) ([]models.OrganizationUser, error)
-	Create(ctx contextx.Contextx, orgUser *models.OrganizationUser) error
-	Update(ctx contextx.Contextx, orgUser *models.OrganizationUser) error
-	Delete(ctx contextx.Contextx, id uint) error
-	DeleteByOrgIDAndUserID(ctx contextx.Contextx, orgID uint, userID uint) error
-}
-
-// OrganizationInvitationRepository defines the interface for organization invitation data access
-type OrganizationInvitationRepository interface {
-	GetByID(ctx contextx.Contextx, id uint) (*models.OrganizationInvitation, error)
-	GetByToken(ctx contextx.Contextx, token string) (*models.OrganizationInvitation, error)
-	GetByOrgID(ctx contextx.Contextx, orgID uint) ([]models.OrganizationInvitation, error)
-	GetByOrgIDAndEmail(ctx contextx.Contextx, orgID uint, email string) (*models.OrganizationInvitation, error)
-	GetPendingByEmail(ctx contextx.Contextx, email string) ([]models.OrganizationInvitation, error)
-	Create(ctx contextx.Contextx, invitation *models.OrganizationInvitation) error
-	Update(ctx contextx.Contextx, invitation *models.OrganizationInvitation) error
-	Delete(ctx contextx.Contextx, id uint) error
-	DeleteExpired(ctx contextx.Contextx) error
-}
 
 // RoleTemplateRepository defines the interface for role template data access
 type RoleTemplateRepository interface {
@@ -115,7 +78,7 @@ type ContextualPermissionRepository interface {
 	GetByID(ctx contextx.Contextx, id uint) (*models.ContextualPermission, error)
 	GetByRoleID(ctx contextx.Contextx, roleID uint) ([]models.ContextualPermission, error)
 	GetByRoleIDAndContext(ctx contextx.Contextx, roleID uint, contextType string, contextValue string) ([]models.ContextualPermission, error)
-	GetEffectivePermissions(ctx contextx.Contextx, roleID uint, orgID *uint) ([]models.ContextualPermission, error)
+	GetEffectivePermissions(ctx contextx.Contextx, roleID uint) ([]models.ContextualPermission, error)
 	Create(ctx contextx.Contextx, permission *models.ContextualPermission) error
 	Update(ctx contextx.Contextx, permission *models.ContextualPermission) error
 	Delete(ctx contextx.Contextx, id uint) error

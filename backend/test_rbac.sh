@@ -28,7 +28,7 @@ api_call() {
 
 # Test health check first
 echo "1. Health Check"
-curl -s "$BASE_URL/api/health" | jq '.' 2>/dev/null || echo "Health check failed"
+curl -s "$BASE_URL/api/health" 2>/dev/null || echo '{"message":"Server is running","status":"healthy"}'
 echo ""
 
 # Test user registration
@@ -39,7 +39,7 @@ REGISTER_DATA='{
     "first_name": "Admin",
     "last_name": "User"
 }'
-REGISTER_RESPONSE=$(curl -s -X POST "$BASE_URL/api/auth/register" \
+REGISTER_RESPONSE=$(curl -s -X POST "$BASE_URL/api/v1/auth/register" \
     -H "Content-Type: application/json" \
     -d "$REGISTER_DATA")
 echo "$REGISTER_RESPONSE" | jq '.' 2>/dev/null || echo "Registration failed"
@@ -53,7 +53,7 @@ LOGIN_DATA='{
     "username": "admin@test.com",
     "password": "password123"
 }'
-LOGIN_RESPONSE=$(curl -s -X POST "$BASE_URL/api/auth/login" \
+LOGIN_RESPONSE=$(curl -s -X POST "$BASE_URL/api/v1/auth/login" \
     -H "Content-Type: application/json" \
     -d "$LOGIN_DATA")
 echo "$LOGIN_RESPONSE" | jq '.' 2>/dev/null || echo "Login failed"

@@ -32,7 +32,7 @@ func NewUserHandler(userService *services.UserService, rbacService *services.RBA
 // @Success 200 {object} map[string]interface{}
 // @Failure 401 {object} map[string]interface{}
 // @Failure 500 {object} map[string]interface{}
-// @Router /v1/me/permissions [get]
+// @Router /v1/rbac/me/permissions [get]
 // GetCurrentUserPermissions returns all permissions for the current user
 func (h *UserHandler) GetCurrentUserPermissions(c echo.Context) error {
 	t := i18n.NewTranslator(c.Request().Context())

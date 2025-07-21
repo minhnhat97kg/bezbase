@@ -1,25 +1,26 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useOrganization } from '../context/OrganizationContext';
 import TabLayout from '../components/common/TabLayout';
-import { rbacService } from '../services/api';
 
-// Import existing components
-import AdvancedRoleManager from '../components/rbac/AdvancedRoleManager';
-import ContextualPermissionManager from '../components/rbac/ContextualPermissionManager';
-import PermissionManager from '../components/rbac/PermissionManager';
+// Import simplified components
+import SimplifiedRoleManager from '../components/rbac/SimplifiedRoleManager';
+import EnhancedPermissionManager from '../components/rbac/EnhancedPermissionManager';
 import UserRoleAssignment from '../components/rbac/UserRoleAssignment';
+import SimpleRoleHierarchy from '../components/rbac/SimpleRoleHierarchy';
+import EffectivePermissionsView from '../components/rbac/EffectivePermissionsView';
+import { rbacService } from '../services/rbacService';
 
 const UnifiedRBAC: React.FC = () => {
   const { t } = useTranslation();
-  const { currentOrganization } = useOrganization();
   const [activeTab, setActiveTab] = useState('roles');
   const [roles, setRoles] = useState([]);
+  const [selectedRole, setSelectedRole] = useState(null);
 
   const loadRoles = async () => {
     try {
       const response = await rbacService.getRoles();
-      setRoles(response.data.data || []);
+      const rolesData = Array.isArray(response.data) ? response.data : [];
+      setRoles(rolesData);
     } catch (error) {
       console.error('Failed to load roles:', error);
       setRoles([]);
@@ -34,12 +35,16 @@ const UnifiedRBAC: React.FC = () => {
     loadRoles();
   }, []);
 
+  useEffect(() => {
+    console.log('Roles updated:', roles);
+  }, [roles]);
+
   const tabs = [
-    { id: 'roles', label: 'Roles & Hierarchy', icon: '🎭' },
-    { id: 'permissions', label: 'Permission Management', icon: '🔑' },
-    { id: 'contextual', label: 'Contextual Permissions', icon: '🌐' },
+    { id: 'roles', label: 'Roles & Permissions', icon: '🎭' },
+    { id: 'hierarchy', label: 'Role Hierarchy', icon: '🌳' },
     { id: 'assignments', label: 'User Assignments', icon: '👥' },
-    { id: 'templates', label: 'Role Templates', icon: '📋' },
+    { id: 'permissions', label: 'Effective Permissions', icon: '🔐' },
+    { id: 'settings', label: 'Settings', icon: '⚙️' },
   ];
 
   return (
@@ -53,23 +58,13 @@ const UnifiedRBAC: React.FC = () => {
                 {t('rbac.title', 'Role-Based Access Control')}
               </h1>
               <p className="mt-1 text-sm text-gray-500">
-                Comprehensive role and permission management for{' '}
-                {currentOrganization ? currentOrganization.name : 'Global System'}
+                Comprehensive role and permission management for the system
               </p>
             </div>
-            {currentOrganization && (
-              <div className="text-right">
-                <div className="text-sm text-gray-500">Current Context</div>
-                <div className="font-medium text-gray-900">{currentOrganization.name}</div>
-                <div className="text-xs text-gray-500">
-                  Organization ID: {currentOrganization.id}
-                </div>
-              </div>
-            )}
           </div>
 
           {/* Quick Stats */}
-          <div className="mt-6 grid grid-cols-1 gap-5 sm:grid-cols-4">
+          <div className="mt-6 grid grid-cols-1 gap-5 sm:grid-cols-5">
             <div className="bg-blue-50 rounded-lg p-4">
               <div className="flex items-center">
                 <div className="flex-shrink-0">
@@ -77,7 +72,7 @@ const UnifiedRBAC: React.FC = () => {
                 </div>
                 <div className="ml-3">
                   <p className="text-sm font-medium text-blue-800">Active Roles</p>
-                  <p className="text-lg font-semibold text-blue-900">-</p>
+                  <p className="text-lg font-semibold text-blue-900">{roles.length}</p>
                 </div>
               </div>
             </div>
@@ -90,6 +85,20 @@ const UnifiedRBAC: React.FC = () => {
                 <div className="ml-3">
                   <p className="text-sm font-medium text-green-800">Permissions</p>
                   <p className="text-lg font-semibold text-green-900">-</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-orange-50 rounded-lg p-4">
+              <div className="flex items-center">
+                <div className="flex-shrink-0">
+                  <span className="text-orange-600 text-xl">🌳</span>
+                </div>
+                <div className="ml-3">
+                  <p className="text-sm font-medium text-orange-800">Root Roles</p>
+                  <p className="text-lg font-semibold text-orange-900">
+                    {roles.filter(r => !r.parent_role_id).length}
+                  </p>
                 </div>
               </div>
             </div>
@@ -112,8 +121,10 @@ const UnifiedRBAC: React.FC = () => {
                   <span className="text-yellow-600 text-xl">📊</span>
                 </div>
                 <div className="ml-3">
-                  <p className="text-sm font-medium text-yellow-800">Templates</p>
-                  <p className="text-lg font-semibold text-yellow-900">6</p>
+                  <p className="text-sm font-medium text-yellow-800">Inherited Roles</p>
+                  <p className="text-lg font-semibold text-yellow-900">
+                    {roles.filter(r => r.parent_role_id).length}
+                  </p>
                 </div>
               </div>
             </div>
@@ -126,24 +137,21 @@ const UnifiedRBAC: React.FC = () => {
         activeTab={activeTab}
         onTabChange={setActiveTab}
       >
-        {/* Roles & Hierarchy Tab */}
+        {/* Roles & Permissions Tab */}
         {activeTab === 'roles' && (
           <div className="space-y-6">
-            <AdvancedRoleManager />
+            <SimplifiedRoleManager />
+            <EnhancedPermissionManager roles={roles} onRefresh={handleRefresh} />
           </div>
         )}
 
-        {/* Permission Management Tab */}
-        {activeTab === 'permissions' && (
+        {/* Role Hierarchy Tab */}
+        {activeTab === 'hierarchy' && (
           <div className="space-y-6">
-            <PermissionManager roles={roles} onRefresh={handleRefresh} />
-          </div>
-        )}
-
-        {/* Contextual Permissions Tab */}
-        {activeTab === 'contextual' && (
-          <div className="space-y-6">
-            <ContextualPermissionManager />
+            <SimpleRoleHierarchy 
+              roles={roles}
+              onRoleUpdate={loadRoles}
+            />
           </div>
         )}
 
@@ -154,10 +162,40 @@ const UnifiedRBAC: React.FC = () => {
           </div>
         )}
 
-        {/* Role Templates Tab */}
-        {activeTab === 'templates' && (
+        {/* Effective Permissions Tab */}
+        {activeTab === 'permissions' && (
           <div className="space-y-6">
-            <RoleTemplatesView />
+            {selectedRole ? (
+              <EffectivePermissionsView 
+                roleId={selectedRole.id}
+                role={selectedRole}
+              />
+            ) : (
+              <div className="bg-white shadow rounded-lg p-6">
+                <div className="text-center py-8">
+                  <span className="text-gray-400 text-4xl mb-4 block">🔐</span>
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">
+                    Select a Role
+                  </h3>
+                  <p className="text-gray-500 mb-4">
+                    Choose a role from the hierarchy view to see its effective permissions
+                  </p>
+                  <button
+                    onClick={() => setActiveTab('hierarchy')}
+                    className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-md text-sm"
+                  >
+                    View Role Hierarchy
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Settings Tab */}
+        {activeTab === 'settings' && (
+          <div className="space-y-6">
+            <BasicSettingsView />
           </div>
         )}
       </TabLayout>
@@ -165,216 +203,117 @@ const UnifiedRBAC: React.FC = () => {
   );
 };
 
-// Role Templates View Component (Enhanced)
-const RoleTemplatesView: React.FC = () => {
-  const [selectedCategory, setSelectedCategory] = useState<string>('all');
-
-  const categories = [
-    { id: 'all', name: 'All Templates', count: 6 },
-    { id: 'system', name: 'System', count: 2 },
-    { id: 'business', name: 'Business', count: 2 },
-    { id: 'basic', name: 'Basic', count: 2 },
-  ];
-
-  const templates = [
-    {
-      id: 1,
-      name: 'Global Administrator',
-      category: 'system',
-      description: 'Complete system administration access across all organizations',
-      permissions: ['*:*'],
-      context: 'global',
-      users: 2,
-      icon: '🔒',
-      color: 'red',
-    },
-    {
-      id: 2,
-      name: 'Organization Administrator',
-      category: 'system',
-      description: 'Full administrative access within a specific organization',
-      permissions: ['org:*', 'users:*', 'roles:*'],
-      context: 'organization',
-      users: 5,
-      icon: '🏢',
-      color: 'blue',
-    },
-    {
-      id: 3,
-      name: 'Team Lead',
-      category: 'business',
-      description: 'Team management and project oversight capabilities',
-      permissions: ['team:manage', 'users:read', 'projects:*'],
-      context: 'team',
-      users: 12,
-      icon: '👨‍💼',
-      color: 'green',
-    },
-    {
-      id: 4,
-      name: 'Project Manager',
-      category: 'business',
-      description: 'Project coordination and resource management',
-      permissions: ['projects:*', 'reports:read', 'resources:manage'],
-      context: 'project',
-      users: 8,
-      icon: '📊',
-      color: 'purple',
-    },
-    {
-      id: 5,
-      name: 'Content Editor',
-      category: 'basic',
-      description: 'Create, edit, and publish content within assigned areas',
-      permissions: ['content:read', 'content:create', 'content:update'],
-      context: 'resource',
-      users: 25,
-      icon: '✏️',
-      color: 'indigo',
-    },
-    {
-      id: 6,
-      name: 'Viewer',
-      category: 'basic',
-      description: 'Read-only access to assigned resources and data',
-      permissions: ['*:read'],
-      context: 'resource',
-      users: 45,
-      icon: '👁️',
-      color: 'gray',
-    },
-  ];
-
-  const filteredTemplates = selectedCategory === 'all' 
-    ? templates 
-    : templates.filter(template => template.category === selectedCategory);
-
-  const getColorClasses = (color: string) => {
-    const colors = {
-      red: 'bg-red-100 text-red-800 border-red-200',
-      blue: 'bg-blue-100 text-blue-800 border-blue-200',
-      green: 'bg-green-100 text-green-800 border-green-200',
-      purple: 'bg-purple-100 text-purple-800 border-purple-200',
-      indigo: 'bg-indigo-100 text-indigo-800 border-indigo-200',
-      gray: 'bg-gray-100 text-gray-800 border-gray-200',
+// Basic Settings View Component
+const BasicSettingsView: React.FC = () => {
+  const handleCreateTemplateRole = async (template: string) => {
+    const templates = {
+      admin: {
+        name: 'admin',
+        display_name: 'Administrator',
+        description: 'Full system administration access'
+      },
+      manager: {
+        name: 'manager',
+        display_name: 'Manager',
+        description: 'Team management and oversight capabilities'
+      },
+      user: {
+        name: 'user',
+        display_name: 'User',
+        description: 'Basic user access to the system'
+      }
     };
-    return colors[color] || colors.gray;
+
+    try {
+      const roleData = templates[template];
+      await rbacService.createRole(roleData);
+      alert(`${roleData.display_name} role created successfully!`);
+    } catch (error: any) {
+      console.error('Failed to create role from template:', error);
+      alert(`Failed to create role: ${error.response?.data?.message || error.message || 'Unknown error'}`);
+    }
   };
 
   return (
     <div className="space-y-6">
-      {/* Category Filter */}
+      {/* Quick Role Templates */}
       <div className="bg-white shadow rounded-lg">
         <div className="px-4 py-5 sm:px-6 border-b border-gray-200">
-          <h3 className="text-lg font-medium text-gray-900">Role Templates</h3>
+          <h3 className="text-lg font-medium text-gray-900">Quick Role Templates</h3>
           <p className="mt-1 text-sm text-gray-500">
-            Pre-configured role templates for quick role creation and standardization
+            Create common roles quickly with pre-defined permissions
           </p>
         </div>
-        
-        <div className="px-4 py-4">
-          <nav className="flex space-x-8" aria-label="Tabs">
-            {categories.map((category) => (
-              <button
-                key={category.id}
-                onClick={() => setSelectedCategory(category.id)}
-                className={`py-2 px-1 border-b-2 font-medium text-sm whitespace-nowrap ${
-                  selectedCategory === category.id
-                    ? 'border-indigo-500 text-indigo-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                }`}
-              >
-                {category.name}
-                <span className="ml-2 py-0.5 px-2 text-xs bg-gray-100 text-gray-900 rounded-full">
-                  {category.count}
-                </span>
-              </button>
-            ))}
-          </nav>
+        <div className="p-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <button 
+              onClick={() => handleCreateTemplateRole('admin')}
+              className="p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-indigo-500 hover:bg-indigo-50 transition-colors"
+            >
+              <div className="text-center">
+                <span className="text-2xl mb-2 block">👑</span>
+                <h4 className="font-medium text-gray-900">Admin</h4>
+                <p className="text-sm text-gray-500">Full system access</p>
+              </div>
+            </button>
+            <button 
+              onClick={() => handleCreateTemplateRole('manager')}
+              className="p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-indigo-500 hover:bg-indigo-50 transition-colors"
+            >
+              <div className="text-center">
+                <span className="text-2xl mb-2 block">👨‍💼</span>
+                <h4 className="font-medium text-gray-900">Manager</h4>
+                <p className="text-sm text-gray-500">Team management</p>
+              </div>
+            </button>
+            <button 
+              onClick={() => handleCreateTemplateRole('user')}
+              className="p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-indigo-500 hover:bg-indigo-50 transition-colors"
+            >
+              <div className="text-center">
+                <span className="text-2xl mb-2 block">👤</span>
+                <h4 className="font-medium text-gray-900">User</h4>
+                <p className="text-sm text-gray-500">Basic access</p>
+              </div>
+            </button>
+          </div>
         </div>
       </div>
 
-      {/* Templates Grid */}
-      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-        {filteredTemplates.map((template) => (
-          <div
-            key={template.id}
-            className={`border-2 rounded-lg p-6 hover:shadow-md transition-shadow ${getColorClasses(template.color)}`}
-          >
-            <div className="flex items-start justify-between">
-              <div className="flex items-center space-x-3">
-                <span className="text-2xl">{template.icon}</span>
-                <div>
-                  <h4 className="text-lg font-medium">{template.name}</h4>
-                  <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-white`}>
-                    {template.context}
-                  </span>
-                </div>
-              </div>
-              <div className="text-right">
-                <div className="text-sm font-medium">{template.users}</div>
-                <div className="text-xs text-gray-600">users</div>
-              </div>
+      {/* System Settings */}
+      <div className="bg-white shadow rounded-lg">
+        <div className="px-4 py-5 sm:px-6 border-b border-gray-200">
+          <h3 className="text-lg font-medium text-gray-900">System Settings</h3>
+          <p className="mt-1 text-sm text-gray-500">
+            Configure system-wide RBAC behavior
+          </p>
+        </div>
+        <div className="p-6 space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h4 className="text-sm font-medium text-gray-900">Require role for new users</h4>
+              <p className="text-sm text-gray-500">Automatically assign a default role to new users</p>
             </div>
-
-            <p className="mt-4 text-sm">{template.description}</p>
-
-            <div className="mt-4">
-              <div className="text-xs font-medium text-gray-700 mb-2">Permissions:</div>
-              <div className="flex flex-wrap gap-1">
-                {template.permissions.slice(0, 3).map((permission, index) => (
-                  <span
-                    key={index}
-                    className="inline-flex px-2 py-1 text-xs bg-white rounded border"
-                  >
-                    {permission}
-                  </span>
-                ))}
-                {template.permissions.length > 3 && (
-                  <span className="inline-flex px-2 py-1 text-xs bg-white rounded border">
-                    +{template.permissions.length - 3} more
-                  </span>
-                )}
-              </div>
+            <input type="checkbox" className="h-4 w-4 text-indigo-600 border-gray-300 rounded" />
+          </div>
+          <div className="flex items-center justify-between">
+            <div>
+              <h4 className="text-sm font-medium text-gray-900">Enable role hierarchy</h4>
+              <p className="text-sm text-gray-500">Allow roles to inherit permissions from parent roles</p>
             </div>
-
-            <div className="mt-6 flex space-x-3">
-              <button className="flex-1 bg-white text-gray-700 border border-gray-300 rounded-md px-3 py-2 text-sm font-medium hover:bg-gray-50">
-                Preview
-              </button>
-              <button className="flex-1 bg-indigo-600 text-white rounded-md px-3 py-2 text-sm font-medium hover:bg-indigo-700">
-                Use Template
-              </button>
+            <div className="flex items-center">
+              <input type="checkbox" className="h-4 w-4 text-indigo-600 border-gray-300 rounded" defaultChecked disabled />
+              <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                Active
+              </span>
             </div>
           </div>
-        ))}
-      </div>
-
-      {/* Usage Guide */}
-      <div className="bg-white shadow rounded-lg">
-        <div className="px-4 py-5 sm:p-6">
-          <h3 className="text-lg font-medium text-gray-900 mb-4">How to Use Role Templates</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="flex items-center justify-between">
             <div>
-              <h4 className="font-medium text-gray-900 mb-2">Quick Creation</h4>
-              <ol className="text-sm text-gray-600 space-y-2">
-                <li>1. Browse available templates by category</li>
-                <li>2. Preview template permissions and context</li>
-                <li>3. Click "Use Template" to create a new role</li>
-                <li>4. Customize the role name and description</li>
-                <li>5. Assign the role to users as needed</li>
-              </ol>
+              <h4 className="text-sm font-medium text-gray-900">Audit permission changes</h4>
+              <p className="text-sm text-gray-500">Log all permission and role modifications</p>
             </div>
-            <div>
-              <h4 className="font-medium text-gray-900 mb-2">Best Practices</h4>
-              <ul className="text-sm text-gray-600 space-y-2">
-                <li>• Start with basic templates and customize as needed</li>
-                <li>• Use system templates for administrative roles</li>
-                <li>• Create custom templates for recurring role patterns</li>
-                <li>• Review and audit role permissions regularly</li>
-                <li>• Document custom role purposes and contexts</li>
-              </ul>
-            </div>
+            <input type="checkbox" className="h-4 w-4 text-indigo-600 border-gray-300 rounded" defaultChecked />
           </div>
         </div>
       </div>

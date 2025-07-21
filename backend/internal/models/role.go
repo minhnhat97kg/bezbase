@@ -13,7 +13,6 @@ type Role struct {
 	Description    string         `json:"description" gorm:"size:500"`
 	IsSystem       bool           `json:"is_system" gorm:"default:false"`
 	IsActive       bool           `json:"is_active" gorm:"default:true"`
-	OrgID          *uint          `json:"org_id" gorm:"index"`
 	ParentRoleID   *uint          `json:"parent_role_id" gorm:"index"`
 	HierarchyLevel int            `json:"hierarchy_level" gorm:"default:0"`
 	CreatedAt      time.Time      `json:"created_at"`
@@ -21,7 +20,6 @@ type Role struct {
 	DeletedAt      gorm.DeletedAt `json:"-" gorm:"index"`
 
 	// Relationships
-	Organization     *Organization          `json:"organization,omitempty" gorm:"foreignKey:OrgID"`
 	ParentRole       *Role                  `json:"parent_role,omitempty" gorm:"foreignKey:ParentRoleID"`
 	ChildRoles       []Role                 `json:"child_roles,omitempty" gorm:"foreignKey:ParentRoleID"`
 	ContextualPerms  []ContextualPermission `json:"contextual_permissions,omitempty" gorm:"foreignKey:RoleID"`

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { rbacService } from '../../services/api';
+import { rbacService } from '../../services/rbacService';
 import Icon from '../common/Icons';
 
 const RoleForm = ({ role, onClose, onSuccess }) => {

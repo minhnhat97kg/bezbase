@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
-import { OrganizationProvider } from './context/OrganizationContext';
 import { useAuth } from './hooks/useAuth';
 import { useTranslation } from 'react-i18next';
 import './i18n';
@@ -14,19 +13,14 @@ import Dashboard from './pages/Dashboard';
 import Profile from './pages/Profile';
 import UserManagement from './pages/UserManagement';
 import UnifiedRBAC from './pages/UnifiedRBAC';
-import OrganizationManagement from './pages/OrganizationManagement';
-import CreateOrganization from './pages/CreateOrganization';
-import OrganizationDebug from './components/debug/OrganizationDebug';
 
 function App() {
   return (
     <AuthProvider>
       <ThemeProvider>
-        <OrganizationProvider>
-          <Router>
-            <AppLayout />
-          </Router>
-        </OrganizationProvider>
+        <Router>
+          <AppLayout />
+        </Router>
       </ThemeProvider>
     </AuthProvider>
   );
@@ -71,14 +65,11 @@ function AppLayout() {
             {/* Redirect old routes to unified RBAC */}
             <Route path="/roles" element={<Navigate to="/rbac" replace />} />
             <Route path="/advanced-rbac" element={<Navigate to="/rbac" replace />} />
-            <Route path="/organizations/manage" element={<OrganizationManagement />} />
-            <Route path="/organizations/create" element={<CreateOrganization />} />
             <Route path="/" element={<Navigate to="/dashboard" />} />
             <Route path="*" element={<Navigate to="/dashboard" />} />
           </Routes>
         </main>
       </div>
-      {/* <OrganizationDebug /> */}
     </div>
   );
 }
